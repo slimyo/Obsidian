@@ -1,0 +1,5 @@
+- Base class for all dense matrices, vectors, and arrays
+- 继承自父类DenseCoeffsBase([[DenseCoeffsBase.h]])
+- 子类：
+	- ArrayBase([[ArrayBase.h]])
+	- MatrixBase([[MatrixBase.h]])

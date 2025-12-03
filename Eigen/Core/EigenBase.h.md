@@ -1,0 +1,1 @@
+- 子类DenseCoeffsBase（[[DenseCoeffsBase.h]]）

@@ -1,0 +1,2 @@
+- 继承自PlainObjectBase基类([[PlainObjectBase.h]])
+- 其中设置选择表达式类型为MatrixBase基类([[MatrixBase.h]])

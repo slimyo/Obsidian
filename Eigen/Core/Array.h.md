@@ -1,0 +1,2 @@
+- 继承自PlainObjectBase基类([[PlainObjectBase.h]])
+- 其中选择基类类型为ArrayBase([[ArrayBase.h]])

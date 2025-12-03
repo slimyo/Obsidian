@@ -1,0 +1,2 @@
+- 继承自dense_xpr_base类（[[Xpr_helper.h]]）
+- 子类：Map类([[Map.h]])
