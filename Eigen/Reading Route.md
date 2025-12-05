@@ -15,7 +15,7 @@ Layer 0 —— Traits 系统（NumTraits, flags, scalar types）
 - m_data 指针的布局
 - static/dynamic/partial-dynamic 三种配置方式
 
-- [ ] 2.MatricBase.h
+- [ ] 2.MatrixBase.h
 - 阅读重点：
 - CRTP 结构
 - coeff / coeffRef
