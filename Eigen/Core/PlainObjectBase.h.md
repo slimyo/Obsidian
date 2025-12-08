@@ -1,4 +1,7 @@
-
+```cpp
+template <typename Derived>
+class PlainObjectBase : public internal::dense_xpr_base<Derived>::type {...
+```
 ## 关系结构如图：
 ```swift
               DenseBase
@@ -20,7 +23,9 @@ Matrix<Scalar,Rows,Cols,Options>   Array<...>
 
 代码开头一大串 typedef、enum：
 ```cpp
-enum { Options = internal::traits<Derived>::Options }; using Base = internal::dense_xpr_base<Derived>::type; using Scalar = internal::traits<Derived>::Scalar; 
+enum { Options = internal::traits<Derived>::Options }; 
+using Base = internal::dense_xpr_base<Derived>::type; 
+using Scalar = internal::traits<Derived>::Scalar; 
 ... 
 using MapType = Eigen::Map<Derived, Unaligned>;
 ```
@@ -293,26 +298,14 @@ Eigen 的普通表达式使用 evaluator，而 PlainObjectBase 是“真实矩�
    */
 
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE constexpr void resize(Index rows, Index cols) {
-
     eigen_assert(internal::check_implication(RowsAtCompileTime != Dynamic, rows == RowsAtCompileTime) &&
-
                  internal::check_implication(ColsAtCompileTime != Dynamic, cols == ColsAtCompileTime) &&
-
-                 internal::check_implication(RowsAtCompileTime == Dynamic && MaxRowsAtCompileTime != Dynamic,
-
-                                             rows <= MaxRowsAtCompileTime) &&
-
-                 internal::check_implication(ColsAtCompileTime == Dynamic && MaxColsAtCompileTime != Dynamic,
-
-                                             cols <= MaxColsAtCompileTime) &&
-
-                 rows >= 0 && cols >= 0 && "Invalid sizes when resizing a matrix or array.");
+                 internal::check_implication(RowsAtCompileTime == Dynamic && MaxRowsAtCompileTime != Dynamic,rows <= MaxRowsAtCompileTime) &&
+                 internal::check_implication(ColsAtCompileTime == Dynamic && MaxColsAtCompileTime != Dynamic,cols <= MaxColsAtCompileTime) &&rows >= 0 && cols >= 0 && "Invalid sizes when resizing a matrix or array.");
 
 #ifndef EIGEN_NO_DEBUG
 
-    internal::check_rows_cols_for_overflow<MaxSizeAtCompileTime, MaxRowsAtCompileTime, MaxColsAtCompileTime>::run(rows,
-
-                                                                                                                  cols);
+    internal::check_rows_cols_for_overflow<MaxSizeAtCompileTime, MaxRowsAtCompileTime, MaxColsAtCompileTime>::run(rows,cols);
 
 #endif
 
@@ -826,11 +819,72 @@ struct conservative_resize_like_impl<Derived, OtherDerived, true>
 ```
 
 ---
-# ⑤ **赋值逻辑（最关键的主体：表达式求值路径）**
+# ⑥ **赋值逻辑（最关键的主体：表达式求值路径）**
+
+`PlainObjectBase` 是**所有具有实际存储的对象**（如 `Matrix`, `Array`）的基类。它实现了“如何存数据”、“如何从表达式求值进来”的核心机制。  
+而“表达式逻辑”（加减乘复合表达式）属于 `MatrixBase` / `DenseBase` 层。
+
+因此：
+
+ **PlainObjectBase 的 operator= 是“sink（接收端）”**  
+ **MatrixBase / expression 是“source（表达式树）”**
+
+```php
+PlainObjectBase::operator=
+        ↓
+_set(other)
+        ↓
+internal::call_assignment
+        ↓
+internal::call_assignment_no_alias
+        ↓
+Assignment<..., Dense2Dense>::run
+        ↓
+call_dense_assignment_loop
+        ↓
+dense_assignment_loop<Kernel>::run
+        ↓
+dense_assignment_loop_impl
+	    ↓
+Kernel.assignCoeffByOuterInner
+        ↓（默认）Kernel.assignCoeff(i,j)
+Kernel.assignCoeff / Kernel.assignPacket
+        ↓
+DstEvaluator.writeCoeff / writePacket
+        ↓
+SrcEvaluator.coeff / readPacket
+        ↓
+递归展开表达式树 (CwiseBinaryOp, Transpose, Block, Map...)
+        ↓
+evaluator<Matrix> → 访问底层存储 data[]
+        ↓
+最终执行：
+    scalar: dst[i] = src[i]
+    packet: SIMD load/store 写入实际内存
+
+```
+### **operator= 的三类归纳**
+
+Eigen 的设计目标是：
+
+- PlainObjectBase → PlainObjectBase : 直接拷贝，带 aliasing 检查
+    
+- 表达式 → PlainObjectBase : 需要 resize、表达式求值
+    
+- ReturnByValue → PlainObjectBase : 自定义维度 + 立即求值
+    
+
+>三类对比：
+
+| 赋值来源                | 处理方式                                          | 是否 resize | 是否检查 aliasing | 最终落点              |
+| ------------------- | --------------------------------------------- | --------- | ------------- | ----------------- |
+| **PlainObjectBase** | `_set(other)`                                 | 可能        | ✔             | `call_assignment` |
+| **任意表达式 EigenBase** | `_resize_to_match(other)` + `Base::operator=` | ✔         | MatrixBase 负责 | `call_assignment` |
+| **ReturnByValue**   | 使用 func.rows(), cols() resize + 求值            | ✔ (完全自定义) | MatrixBase 负责 | `call_assignment` |
+
+#### 1）PlainObjectBase → PlainObjectBase
 
 ```cpp
-  
-
   /** This is a special case of the templated operator=. Its purpose is to
 
    * prevent a default operator= from hiding the templated operator=.
@@ -843,37 +897,33 @@ struct conservative_resize_like_impl<Derived, OtherDerived, true>
 
   }
 
-  
+```
 
-  /** \sa MatrixBase::lazyAssign() */
+这是一个**非模板** operator=，用于避免模板匹配歧义。
 
-  template <typename OtherDerived>
+##### `_set()` 做什么？
 
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE Derived& lazyAssign(const DenseBase<OtherDerived>& other) {
+```cpp
+internal::call_assignment(this->derived(), other.derived());
+```
+##### `call_assignment()` 是 Eigen 的 assignment 算法入口
 
-    _resize_to_match(other);
+>`call_assignment()`:[[AssignEvaluator.h]](Part6)
 
-    return Base::lazyAssign(other.derived());
+- 它负责：
 
-  }
+	1. aliasing 检查
 
-  
+	如果 `A = A.transpose()`，会自动选择临时变量避免覆盖。
 
-  template <typename OtherDerived>
+	2. 自动 SIMD / 逐元素 copy / 内存策略选择
 
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE Derived& operator=(const ReturnByValue<OtherDerived>& func) {
+	全部是 compile-time dispatch。
 
-    resize(func.rows(), func.cols());
+#### 2）赋值任意表达式（EigenBase）
 
-    return Base::operator=(func);
-
-  }
-
-  // \li \c --------一段构造函数定义
-
- public:
-
-  /** \brief Copies the generic expression \a other into *this.
+```cpp
+/** \brief Copies the generic expression \a other into *this.
 
    * \copydetails DenseBase::operator=(const EigenBase<OtherDerived> &other)
 
@@ -891,40 +941,71 @@ struct conservative_resize_like_impl<Derived, OtherDerived, true>
 
   }
 ```
+这是 **表达式模板最终被 evaluate 的核心路径**。
 
-### operator= 分为三类：
+###### 关键步骤
 
-#### 1) 直接赋值 PlainObjectBase → PlainObjectBase
+1. resize 到表达式的维度
+
+`_resize_to_match(other);`
+
+其中 `resizeLike(other)` 会根据是否是 row/col vector 做额外处理。
+
+2. 调用 MatrixBase::operator=
+
+`Base::operator=(other.derived())`
+
+`MatrixBase`层会：
+
+- 派发到 assign evaluator
+    
+- 对表达式求值（包括稀疏/密集）
+    
+- 决定是否需要 temporary（aliasing、noalias、lazy）最终仍然落到：
+	`internal::call_assignment(...)`
+
+#### 3）ReturnByValue 赋值（特殊 case）
 
 ```cpp
-operator=(const PlainObjectBase& other) {     return _set(other); }
+
+  template <typename OtherDerived>
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE Derived& operator=(const ReturnByValue<OtherDerived>& func) {
+
+    resize(func.rows(), func.cols());
+
+    return Base::operator=(func);
+
+  }
 ```
 
-#### 2) 赋值表达式（MatrixBase）
+ReturnByValue 常见于：
+
+- `MatrixXd::Identity(n,m)`
+    
+- 自定义返回矩阵大小的仿函数
+    
+###### 与一般表达式的区别：
+1. **赋值前明确知道行列数**  
+2. 不需要匹配 “lazyAssign / resizeLike”  
+3. 可以完全自定义维度，无需依赖表达式原型
+
+### 其他函数：
 
 ```cpp
-operator=(const EigenBase<OtherDerived>& other)
+  /** \sa MatrixBase::lazyAssign() */
+
+  template <typename OtherDerived>
+
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE Derived& lazyAssign(const DenseBase<OtherDerived>& other) {
+
+    _resize_to_match(other);
+
+    return Base::lazyAssign(other.derived());
+  }
 ```
 
-首先：
-
-```cpp
-_resize_to_match(other)
-```
-
-然后：
-
-```cpp
-Base::operator=(other.derived())
-```
-
-由 `MatrixBase` 层处理表达式求值。
-
----
-
-### 关键内部函数
-
-#### resize_to_match()
+###  `_resize_to_match()` 
 
 ```cpp
 protected:
@@ -966,7 +1047,24 @@ protected:
   }
 ```
 
-#### `_set()`
+这里更强调：
+#### **什么时候会 resize？**
+
+- 当 _this 未初始化_
+    
+- 当尺寸不匹配
+    
+- 当 vector ↔ row-vector 转换时，Eigen 会保持 orientation
+    
+#### 重点：
+
+`#ifdef EIGEN_NO_AUTOMATIC_RESIZING     eigen_assert( ... ); #else     resizeLike(other); #endif`
+
+这使得 Eigen 在 debug 场景下能模拟 “固定尺寸矩阵”，用断言保证行为一致。
+
+###  `_set()` 和 `_set_noalias()` 的区别
+
+#### 1.`_set()`（最常用路径）
 
 ```cpp
 /**
@@ -1012,11 +1110,16 @@ protected:
   }
 ```
 
-带 aliasing 检查的 assignment：
+`call_assignment(this, other)`
 
-`internal::call_assignment(this->derived(), other.derived());`
+- 有 aliasing 检查
+    
+- 需要时自动 temporary
+    
+- 是最安全的赋值方式
+    
 
-#### `_set_noalias()`
+#### 2.`_set_noalias()`
 
 ```cpp
 /** \internal Like _set() but additionally makes the assumption that no aliasing effect can happen (which
@@ -1052,15 +1155,53 @@ protected:
   }
 ```
 
-用于新建对象时的 lazy assignment：
 
-`internal::call_assignment_no_alias(...)`
+`call_assignment_no_alias(this, other)`
 
-这是 Eigen 表达式模板的**最终落地点（sink）**。
+适用于 **新构造对象**，例如：
+
+`MatrixXd A = B + C;   // A 尚未初始化`
+
+特点：
+
+- 跳过 aliasing 检查
+    
+- 允许 lazy evaluation
+    
+- 适合用于性能优化（避免检查，提高向量化）
+    
+
+这是 Eigen **性能优化的关键**。
+
+###  Eigen 最终赋值流程
+
+ Assignment 过程如下：
+
+```cpp
+                   [ 表达式树 (Cwise, Product, Block, Transpose...) ]
+                                        |
+                                        v
+    [PlainObjectBase::operator= / lazyAssign / set / noalias]
+                                        |
+                        resize / aliasing / orientation fix
+                                        |
+                                        v
+                    [MatrixBase::operator= 的 evaluator]
+                                        |
+                       assign_op / vectorization / packet math
+                                        |
+                                        v
+                     internal::call_assignment* (最终执行)
+                                        |
+                                        v
+                        [真实写入 PlainObjectBase 的存储 array[]]
+
+```
+
 
 ---
 
-# ⑥ **构造函数：多种初始化路径**
+# ⑦ **构造函数：多种初始化路径**
 
 ```cpp
  // Prevent user from trying to instantiate PlainObjectBase objects
@@ -1277,7 +1418,7 @@ protected:
 
 ---
 
-# ⑦ Map 系列
+# ⑧ Map 系列
 
 ```cpp
 /** \name Map
@@ -1483,7 +1624,7 @@ PlainObjectBase 是传统矩阵类型，Map 是“矩阵视图”。
 
 ---
 
-# ⑧ swap 优化
+# ⑨ swap 优化
 
 ```cpp
 public:
