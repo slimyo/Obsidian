@@ -9,6 +9,28 @@ Layer 0 —— Traits 系统（NumTraits, flags, scalar types）
 ```
 ## 1、存储+基础 API
 ---
+
+```cpp
+                           EigenBase<Derived>
+                                   ↑
+                       DenseCoeffsBase<Derived, Access>
+                                   ↑
+                             DenseBase<Derived>
+                                   ↑
+                           MatrixBase<Derived>
+                                   ↑1
+                        PlainObjectBase<Derived>
+                                   ↑
+                         Matrix / Array (具体类型)
+
+```
+
+- [ ] 00.EigenBase.h
+
+- [ ] 01.DenseCoeffsBase.h
+
+- [ ] 02.DenseBase.h
+
 - [ ] 1. DenseStorage.h
 - 阅读重点：
 - 动态矩阵如何管理内存
@@ -39,8 +61,6 @@ Layer 0 —— Traits 系统（NumTraits, flags, scalar types）
 - Resize 与维度管理
 你需要掌握：
 - 如何写自己的 Matrix 类接口
-
-- [ ] 4.DenseBase.h
 
 ## 2、表达式系统(真正构建矩阵计算)
 ---
