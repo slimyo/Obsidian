@@ -79,6 +79,19 @@
 
 学习内容（按周做）
 
+
+|章节号 (Chapter)|内容 / 模块|推荐理由|
+|---|---|---|
+|**4–5**|文件 I/O 基础 & 深入 (open/read/write/close/fcntl / pread/pwrite / scatter-gather / nonblocking I/O / large file)|基本 I/O，是所有系统 + 数据加载/存储 + 日志 + 文件交互基础|
+|**6**|进程 (process basics)|理解进程模型、虚拟地址空间、命令行／环境／堆栈布局，对任何系统级/服务级都基础|
+|**24–28**|进程创建 / exec / fork / clone / process termination / wait / 子进程管理|dataloader、worker pool、多进程服务 / 分布式启动等，都强依赖 fork/exec/execve/clone|
+|**29–33**|线程 (pthread)、同步、thread local storage|多线程 I/O、异步任务、并发 kernel、线程池等必须|
+|**49–50**|Memory mapping / Virtual memory operations (mmap, mprotect, mlock, madvise, msync, shared memory mapping)|对大模型 / GPU pinned memory / 数据预处理 / zero-copy IO 非常关键|
+|**56–60**|Socket API + TCP/UDP 网络基础 + Server 设计|用于 RPC / inference server / distributed training / parameter server 等网络通信|
+|**60 (I/O 多路复用 / 服务器设计)**|epoll / select / poll / server model|构建高性能网络服务 (如 LLM inference 服务) 的基础|
+|**20–22 / 23**|信号 (signal) + 计时器 / sleep /定时器|对后台任务、异步 I/O、超时、资源管理、定时任务管理重要|
+|**43–48 / IPC / Pipe / FIFO / System V / POSIX IPC / Shared Memory / Semaphore / Message Queue / File Locking**|进程间通信 + 共享内存 + 锁机制|对多进程 / 多 worker / IPC / 数据共享 /锁机制有用 (尤其在 HPC、训练/推理系统)|
+
 ### Week 2（40h）
 
 - 进程：fork/exec/wait
