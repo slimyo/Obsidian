@@ -198,7 +198,7 @@ Ninja 不是 Make 的直接替代，而是一个 **低层次、速度优先** �
 
 ---
 
-# 🧪 **简短总结**
+### 🧪 **简短总结**
 
 |工具|作用|
 |---|---|
@@ -224,9 +224,10 @@ sudo apt install -y cmake clang ninja-build
 
 ---
 
-# 🧪 **2. 验证安装成功**
 
-## ✔ 验证 CMake
+## 🧪 **2. 验证安装成功**
+
+### ✔ 验证 CMake
 
 ```
 cmake --version
@@ -238,7 +239,7 @@ cmake --version
 
 ---
 
-## ✔ 验证 Clang
+### ✔ 验证 Clang
 
 ```
 clang --version clang++ --version
@@ -250,7 +251,7 @@ clang --version clang++ --version
 
 ---
 
-## ✔ 验证 Ninja
+### ✔ 验证 Ninja
 
 ```
 ninja --version
@@ -317,7 +318,7 @@ ninja
 
 ---
 
-# **(1) 在的本地 Windows VSCode 安装 "clangd" 插件（最重要）**
+## **(1) 在的本地 Windows VSCode 安装 "clangd" 插件（最重要）**
 
 clangd 是 VSCode 的语言服务器（LSP），必须通过 **VSCode 插件** 启动。
 
@@ -338,7 +339,7 @@ clangd 是 VSCode 的语言服务器（LSP），必须通过 **VSCode 插件** �
 
 ---
 
-# ✅ **(2) 在 WSL 中安装 clangd（真正执行代码分析的地方）**
+## ✅ **(2) 在 WSL 中安装 clangd（真正执行代码分析的地方）**
 
 VSCode 只是 UI，**clangd 真正运行在你的 WSL Linux 里**。
 
@@ -356,7 +357,7 @@ VSCode 只是 UI，**clangd 真正运行在你的 WSL Linux 里**。
 
 ---
 
-# 🧠 为什么 VSCode 需要双侧安装？
+## 🧠 为什么 VSCode 需要双侧安装？
 
 ### 📌 Windows 安装
 
@@ -386,7 +387,7 @@ VSCode 会自动调用：
 
 ---
 
-# ⚙️ **检查 VSCode 是否正确连接 WSL 的 clangd**
+## ⚙️ **检查 VSCode 是否正确连接 WSL 的 clangd**
 
 在 VSCode（打开 WSL 工程后）按：
 
@@ -404,7 +405,7 @@ VSCode 会自动调用：
 
 ---
 
-# 📌 **如何正确打开工程？（非常重要）**
+## 📌 **如何正确打开工程？（非常重要）**
 
 在 Windows VSCode 左下角：
 
@@ -420,7 +421,7 @@ VSCode 会自动调用：
 
 ---
 
-# 🧪 测试 clangd 是否工作
+## 🧪 测试 clangd 是否工作
 
 你的工程根目录必须有：
 
