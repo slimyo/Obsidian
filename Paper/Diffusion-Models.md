@@ -1,4 +1,4 @@
-# **DeepUnsupervisedLearningUsingNonequilibriumThermodynamics**
+# **Deep Unsupervised Learning Using Nonequilibrium Thermodynamics**
 
 ---
 ## 一、论文解决的**根本问题**
@@ -114,4 +114,5 @@ $$\int dx^{(0,t)} q(x^{(0,t)}) \, D_{\rm KL}(\cdot) \;\approx\; \frac{1}{N} \sum
 - 只训练 KL 项：条件熵项不依赖$\theta$:$$\min_\theta \sum_{t=2}^{T} D_{\rm KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})\|p_\theta(x^{(t-1)}|x^{(t)})$$
 - 进一步简化为噪声预测 MSE：$$\min_\theta \mathbb{E}_{x^{(0)}, \epsilon, t} \big[ \| \epsilon - \epsilon_\theta(x^{(t)}, t) \|^2 \big]$$
 ---
-# DenoisingDiffusionProbablilisticModels
+# **Denoising Diffusion Probablilistic Models**
+
