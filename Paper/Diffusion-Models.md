@@ -75,7 +75,7 @@ $$p_\theta(x_{t-1} \mid x_t)$$
 - 定义稳定概率分布：$$\pi(y)=\int dy'T_\pi (y|y';\beta)\pi (y')$$转移函数:$$q(x^{(t)}|x^{(t-1)})=T_\pi (x^{(t)}|x^{(t-1)};\beta)$$则前向规矩为:
 $$q(x^{(0...T)})=q(x^{(0)})\prod_{t=1}^{T} q(x^{(t)}|x^{(t-1)})$$
 ---
-- 反向轨迹$$p(x^{(T)})=\pi(x^{(T)})$$且:$$p(x^{(0...T)})=p(x^{(T)})\prod_{t=1}^{T} q(x^{(t-1)}|x^{(t)})$$
+- 反向轨迹$$p(x^{(T)})=\pi(x^{(T)})$$且:$$p(x^{(0...T)})=p(x^{(T)})\prod_{t=1}^{T} p(x^{(t-1)}|x^{(t)})$$
 ---
 - 模型概率(从起点$x^{(T)}$高斯噪声开始的，所有生成目标数据$x^{(0)}$的路径积分和)$$p(x^{(0)})=\int dx^{(1...T)}p(x^{(0...T)})$$无法直接求，改为:$$
 \begin{align*}
@@ -97,12 +97,41 @@ q(x^{(1:T)}|x^{(0)})
 \end{align*}$$我用一个我能采样的分布$q(x^{(1:T)}|x^{(0)})$ 来重写积分
 
 ---
-- 目标函数(极大似然估计)：$$L=\int dx^{(0)}q(x^{0})log [p(x^{0})]$$代入前文等式得:$$=\int dx^{(0)}q(x^{0})\cdot log[\int dx^{(1...T)}q(x^{(1...T)}|x^{(0)})\cdot p(x^{(T)})\prod_{t=1}^{T}\frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]$$应用Jensen不等式：$$L\ge \int dx^{(0...T)}q(x^{(0...T)})\cdot log[ p(x^{(T)})\prod_{t=1}^{T}\frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]=K$$打开log，边缘化无关变量$x^{0:T-1}$：$$K= \int dx^{(0...T)}q(x^{(0...T)})\cdot \sum _{t=1}^{T}log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]+\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))$$根据熵定义$H(x)=-\int dxp(x)log(p(x))$则有:$$K= \sum _{t=1}^{T}\int dx^{(0...T)}q(x^{(0...T)})\cdot log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]-H_p(x^{(T)})$$拿出第一项,有:$$K= \sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]+\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]-H_p(x^{(T)})$$边缘化无关变量，且由于$p(x^{(0)}|x^{(1)})=q(x^{(1)}|x^{(0)})\frac{\pi (x^{(0)})}{\pi (x^{(1)})}$则：$$K= \sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]+\int dx^{(0,1)}q(x^{(0,1)})log[ \frac{q(x^{(1)}|x^{(0)})\pi(x^{(0)})}{q(x^{(1)}|x^{(0)})\pi(x^{(1)})}]-H_p(x^{(T)})$$由于设计前向过程，熵$H_p(x^{(t)})=H_p(x^{(T)})=\mathbb{E}_p(-log(\pi(x)))$则中项展开后消去：$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]-H_p(x^{(T)})$$前向过程满足Markov性，即$q(x^{(t)}|x^{(t-1)})=q(x^{(t)}|x^{(t-1)},x^{(0)})$，则:$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)},x^{(0)})}]-H_p(x^{(T)})$$由贝叶斯规则$q(x^{(t)}|x^{(t-1)},x^{(0)})\frac{q(x^{(t-1)}|x^{(0)})}{q(x^{(t)}|x^{(0)})}=q(x^{(t-1)}|x^{(t)},x^{(0)})$：$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}\frac{q(x^{(t-1)}|x^{(0)})}{q(x^{(t)}|x^{(0)})}]-H_p(x^{(T)})$$拆开,写成条件熵:$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}]+\sum_{t=2}^{T}[H_q(x^{(t)}|x^{(0)})-H_q(x^{(t-1)}|x^{(0)})]-H_p(x^{(T)})$$合并：$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}]+H_q(x^{(T)}|x^{(0)})-H_q(x^{(1)}|x^{(0)})-H_p(x^{(T)})$$由:$$D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))=\int dx^{(t-1)}q(x^{(t-1)}|x^{(t)},x^{(0)})log(\frac{q(x^{(t-1)}|x^{(t)},x^{(0)})}{p(x^{(t-1)}|x^{(t)})})$$得到：
+- 目标函数(极大似然估计)：$$L=\int dx^{(0)}q(x^{0})log [p(x^{0})]= \mathbb E_{q(x^{(0)})}[\log p(x^{(0)})]$$代入前文等式得:$$=\int dx^{(0)}q(x^{0})\cdot log[\int dx^{(1...T)}q(x^{(1...T)}|x^{(0)})\cdot p(x^{(T)})\prod_{t=1}^{T}\frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]$$应用Jensen不等式：$$L\ge \int dx^{(0...T)}q(x^{(0...T)})\cdot log[ p(x^{(T)})\prod_{t=1}^{T}\frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]=K$$打开log，边缘化无关变量$x^{0:T-1}$：$$K= \int dx^{(0...T)}q(x^{(0...T)})\cdot \sum _{t=1}^{T}log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]+\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))$$根据熵定义$H(x)=-\int dxp(x)log(p(x))$，且$p(x^{(T)})=\pi(x^{(T)})$则有:$$K= \sum _{t=1}^{T}\int dx^{(0...T)}q(x^{(0...T)})\cdot log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]-H_p(x^{(T)})$$拿出第一项,有:$$K= \sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]+\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]-H_p(x^{(T)})$$边缘化无关变量，且由于$p(x^{(0)}|x^{(1)})=q(x^{(1)}|x^{(0)})\frac{\pi (x^{(0)})}{\pi (x^{(1)})}$则：$$K= \sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]+\int dx^{(0,1)}q(x^{(0,1)})log[ \frac{q(x^{(1)}|x^{(0)})\pi(x^{(0)})}{q(x^{(1)}|x^{(0)})\pi(x^{(1)})}]-H_p(x^{(T)})$$由于设计前向过程，熵$H_p(x^{(t)})=H_p(x^{(T)})=\mathbb{E}_p(-log(\pi(x)))$则中项展开后消去：$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]-H_p(x^{(T)})$$前向过程满足Markov性，即$q(x^{(t)}|x^{(t-1)})=q(x^{(t)}|x^{(t-1)},x^{(0)})$，则:$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)},x^{(0)})}]-H_p(x^{(T)})$$由贝叶斯规则$q(x^{(t)}|x^{(t-1)},x^{(0)})\frac{q(x^{(t-1)}|x^{(0)})}{q(x^{(t)}|x^{(0)})}=q(x^{(t-1)}|x^{(t)},x^{(0)})$：$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}\frac{q(x^{(t-1)}|x^{(0)})}{q(x^{(t)}|x^{(0)})}]-H_p(x^{(T)})$$拆开,第二项写成条件熵:$$\begin{align*}\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[\frac{q(x^{(t-1)}|x^{(0)})}{q(x^{(t)}|x^{(0)})}]\\
+=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[{q(x^{(t-1)}|x^{(0)})}]
+-\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[{q(x^{(t)}|x^{(0)})}]\\
+=\sum _{t=2}^{T}\int dx^{(0,t)}q(x^{(0)})q(x^{(t)}|x^{(0)})log[{q(x^{(t)}|x^{(0)})}]-\sum _{t=2}^{T}\int dx^{(0,t-1)}q(x^{(0)})q(x^{(t-1)}|x^{(0)})log[{q(x^{(t-1)}|x^{(0)})}]\\
+=\sum_{t=2}^{T}[H_q(x^{(t)}|x^{(0)})-H_q(x^{(t-1)}|x^{(0)})]
+\end{align*}$$则：$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}]+\sum_{t=2}^{T}[H_q(x^{(t)}|x^{(0)})-H_q(x^{(t-1)}|x^{(0)})]-H_p(x^{(T)})$$合并：$$=\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}]+H_q(x^{(T)}|x^{(0)})-H_q(x^{(1)}|x^{(0)})-H_p(x^{(T)})$$由:$$D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))=\int dx^{(t-1)}q(x^{(t-1)}|x^{(t)},x^{(0)})log(\frac{q(x^{(t-1)}|x^{(t)},x^{(0)})}{p(x^{(t-1)}|x^{(t)})})$$得到：
 ---
-$$\begin{align*}L\ge K\\
-&=\sum _{t=2}^{T}\int dx^{(0,t)}q(x^{(0,t)})D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))\\
+- **形式一:**$$\begin{align*}L\ge K\\
+&=-\sum _{t=2}^{T}\int dx^{(0,t)}q(x^{(0,t)})D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))\\
 &+H_q(x^{(T)}|x^{(0)})-H_q(x^{(1)}|x^{(0)})-H_p(x^{(T)})
 \end{align*}$$
+---
+# **Denoising Diffusion Probablilistic Models**
+
+- 原始公式：$$L\ge \int dx^{(0...T)}q(x^{(0...T)})\cdot log[ p(x^{(T)})\prod_{t=1}^{T}\frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]=K$$
+- 令$V_{VLB}=-K$,由于：$$arg\max_\theta L=\mathbb{E}_{q(x^{(0)})}[\log p_\theta(x^{(0)})]\ge arg\max_\theta K\iff arg\min_\theta V_{VLB}=\mathbb{E}_{q(x^{(0)})}[-\log p_\theta(x^{(0)})]$$
+- 则:$$\begin{align*}V_{VLB}&= -\int dx^{(0...T)}q(x^{(0...T)})\cdot \sum _{t=1}^{T}log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]-\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))\\
+&=-\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]-\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]\\&-\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))\\
+&=-\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]
+\\&-[\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}]+H_q(x^{(T)}|x^{(0)})-H_q(x^{(1)}|x^{(0)})]\\&-\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))\\
+\end{align*}$$
+- 对于上述原式:$$\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]=\mathbb E_{q(x^1)}[D_{KL}(q(x^{(0)}|x^{(1)}||p(x^{(0)}|x^{(1)}))]$$且:$$\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]=-\mathbb E_q[\sum _{t=2}^{T}D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))]$$
+
+- 又：$$\begin{align*}
+\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]-H_q(x^{(1)}|x^{(0)})\\
+=\int dx^{(0,1)}q(x^{(0,1)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]+\int dx^{(0,1)}q(x^{(0,1)})log[q(x^{(1)}|x^{(0)})]\\
+= \int dx^{(0,1)}q(x^{(0,1)})log[ {p(x^{(0)}|x^{(1)})}]=\mathbb E_{q(x^0,x^1)}[log[p(x^{(0)}|x^{(1)})]]
+\end{align*}$$
+
+则有：
+
+---
+- **形式二：**
+$$V_{VLB}=\mathbb E_q[D_{KL}(q(x^{(T)}|x^{(0)})||p_\theta(x^{(T)}))+\sum _{t=2}^{T}D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))-logp_\theta(x^{(0)}|x^{(1)})]$$
+
 ---
 - **优化目标**:
 - 定义:
@@ -117,11 +146,3 @@ $$p_\theta(x^{(t-1)}|x^{(t)}) = \mathcal{N}\big(x^{(t-1)}; \mu_\theta(x^{(t)}, t
 $$\int dx^{(0,t)} q(x^{(0,t)}) \, D_{\rm KL}(\cdot) \;\approx\; \frac{1}{N} \sum_{i=1}^N D_{\rm KL}(\cdot \mid x^{(0)}_i, x^{(t)}_i)$$
 - 只训练 KL 项：条件熵项不依赖$\theta$:$$\min_\theta \sum_{t=2}^{T} D_{\rm KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})\|p_\theta(x^{(t-1)}|x^{(t)})$$
 - 进一步简化为噪声预测 MSE：$$\min_\theta \mathbb{E}_{x^{(0)}, \epsilon, t} \big[ \| \epsilon - \epsilon_\theta(x^{(t)}, t) \|^2 \big]$$
----
-# **Denoising Diffusion Probablilistic Models**
-
-- 优化目标：$$\begin{align*}\max_\theta L&=
-\int dx^{(0)}q(x^{0})log [p_\theta(x^{0})]\\
-&=\max_\theta\mathbb E_{q(x^0)}[logp_\theta(x^0)]\\
-&=\min_\theta \mathbb E_{q(x^0)}[-logp_\theta(x^0)]
-\end{align*}$$
