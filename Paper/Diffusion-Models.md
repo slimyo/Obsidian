@@ -72,7 +72,7 @@ $$p_\theta(x_{t-1} \mid x_t)$$
 - KL散度（相对熵）:$$D_{KL}(P||Q)=\int dxp(x)log\frac{p(x)}{q(x)}$$
 ---
 - 前向轨迹
-- 定义稳定概率分布：$$\pi(y)=\int dy'T_\pi (y|y';\beta)\pi (y')$$转移函数:$$q(x^{(t)}|x^{(t-1)})=T_\pi (x^{(t)}|x^{(t-1)};\beta)$$则前向规矩为:
+- 定义稳定概率分布：$$\pi(y)=\int dy'T_\pi (y|y';\beta)\pi (y')$$转移函数:$$q(x^{(t)}|x^{(t-1)})=T_\pi (x^{(t)}|x^{(t-1)};\beta)$$则前向轨迹为:
 $$q(x^{(0...T)})=q(x^{(0)})\prod_{t=1}^{T} q(x^{(t)}|x^{(t-1)})$$
 ---
 - 反向轨迹$$p(x^{(T)})=\pi(x^{(T)})$$且:$$p(x^{(0...T)})=p(x^{(T)})\prod_{t=1}^{T} p(x^{(t-1)}|x^{(t)})$$
@@ -111,6 +111,8 @@ q(x^{(1:T)}|x^{(0)})
 ---
 # **Denoising Diffusion Probablilistic Models**
 
+- 模型有：$$p(x^T)=N(x^T,\mathbb 0,I)$$定义:$$p_\theta(x^{t-1}|x^t):=N(x^{t-1};\mu_\theta(x^t,t),\Sigma_\theta(x^t,t))$$和:$$q(x^t|x^{t-1}):=N(x^{t};\sqrt{1-\beta_t}x^{t-1},\beta_tI)$$
+
 - 原始公式：$$L\ge \int dx^{(0...T)}q(x^{(0...T)})\cdot log[ p(x^{(T)})\prod_{t=1}^{T}\frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]=K$$
 - 令$V_{VLB}=-K$,由于：$$arg\max_\theta L=\mathbb{E}_{q(x^{(0)})}[\log p_\theta(x^{(0)})]\ge arg\max_\theta K\iff arg\min_\theta V_{VLB}=\mathbb{E}_{q(x^{(0)})}[-\log p_\theta(x^{(0)})]$$
 - 则:$$\begin{align*}V_{VLB}&= -\int dx^{(0...T)}q(x^{(0...T)})\cdot \sum _{t=1}^{T}log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]-\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))\\
@@ -118,19 +120,41 @@ q(x^{(1:T)}|x^{(0)})
 &=-\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]
 \\&-[\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t-1)}|x^{(t)},x^{(0)})}]+H_q(x^{(T)}|x^{(0)})-H_q(x^{(1)}|x^{(0)})]\\&-\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))\\
 \end{align*}$$
-- 对于上述原式:$$\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]=\mathbb E_{q(x^1)}[D_{KL}(q(x^{(0)}|x^{(1)}||p(x^{(0)}|x^{(1)}))]$$且:$$\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]=-\mathbb E_q[\sum _{t=2}^{T}D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))]$$
-
-- 又：$$\begin{align*}
+1. 对于上述原式:$$\sum _{t=2}^{T}\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(t-1)}|x^{(t)})}{q(x^{(t)}|x^{(t-1)})}]=-\mathbb E_q[\sum _{t=2}^{T}D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))]$$
+2. 由于：$$\int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]=\mathbb E_{q(x^1)}[D_{KL}(q(x^{(0)}|x^{(1)}||p(x^{(0)}|x^{(1)}))]$$又：$$\begin{align*}
 \int dx^{(0...T)}q(x^{(0...T)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]-H_q(x^{(1)}|x^{(0)})\\
 =\int dx^{(0,1)}q(x^{(0,1)})log[ \frac{p(x^{(0)}|x^{(1)})}{q(x^{(1)}|x^{(0)})}]+\int dx^{(0,1)}q(x^{(0,1)})log[q(x^{(1)}|x^{(0)})]\\
 = \int dx^{(0,1)}q(x^{(0,1)})log[ {p(x^{(0)}|x^{(1)})}]=\mathbb E_{q(x^0,x^1)}[log[p(x^{(0)}|x^{(1)})]]
 \end{align*}$$
+3. 剩余两项：$$\begin{align*}H_q(x^{(T)}|x^{(0)})+\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))\\=-\int dx^{(0,T)}q(x^{(0,T)})log(q(x^{(T)}|x^{(0)}))+\int dx^{(T)}q(x^{(T)})log(p(x^{(T)}))\\=-\int dx^{(0,T)}q(x^{(0,T)})log(q(x^{(T)}|x^{(0)}))+\int dx^{(0,T)}q(x^{(0,T)})log(p(x^{(T)}))\\=-\int dx^{(0,T)}q(x^{(0,T)})\cdot log\frac{q(x^{(T)}|x^{(0)})}{p(x^{(T)})}\\=-\int dx^{(0)}q(x^{(0)})D_{KL}[q(x^{(T)}|x^{(0)})||p(x^{(T)})]\\=-\mathbb E_q[D_{KL}[q(x^{(T)}|x^{(0)})||p(x^{(T)})]]
+\end{align*}$$
+---
+- 也可以：根据$$\begin{align*}
+\displaystyle
+p(x^{(0)})&=\int dx^{(1:T)}
+p(x^{(0:T)})
+\frac{q(x^{(1:T)}|x^{(0)})}
+{q(x^{(1:T)}|x^{(0)})}\\
+&=\int dx^{(1:T)}
+q(x^{(1:T)}|x^{(0)})
+\frac{p(x^{(0:T)})}
+{q(x^{(1:T)}|x^{(0)})}\\
+&=\mathbb E_q[log\frac{p(x^{(0:T)})}
+{q(x^{(1:T)}|x^{(0)})}]\\
+L&=\mathbb E_q[-log\frac{p(x^{(0:T)})}
+{q(x^{(1:T)}|x^{(0)})}]
+\end{align*}$$展开计算。
 
 则有：
 
 ---
 - **形式二：**
-$$V_{VLB}=\mathbb E_q[D_{KL}(q(x^{(T)}|x^{(0)})||p_\theta(x^{(T)}))+\sum _{t=2}^{T}D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))-logp_\theta(x^{(0)}|x^{(1)})]$$
+$$V_{VLB}=\mathbb E_q[\underbrace{D_{KL}(q(x^{(T)}|x^{(0)})||p_\theta(x^{(T)}))}_{L_T}+\sum _{t=2}^{T}\underbrace{D_{KL}(q(x^{(t-1)}|x^{(t)},x^{(0)})||p(x^{(t-1)}|x^{(t)}))}_{L_{t-1}}-\underbrace{logp_\theta(x^{(0)}|x^{(1)})}_{L_0}]$$
+
+
+---
+- 当前向过程变量$\beta_t$通过重参数化学习，固定后，$L_T$为常数
+
 
 ---
 - **优化目标**:
