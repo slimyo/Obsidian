@@ -1,4 +1,18 @@
 
+### 三元表达式：
+
+```cpp
+value = cond ? if_value :else_value;
+```
+
+### 按位异或（XOR）
+
+```cpp
+int a=0;
+int b=4;
+int c =  a^b;//按位异或
+```
+
 ### 类别推导的注意
 ```cpp
 auto f = {n[i], n[j], n[k]};
@@ -25,3 +39,53 @@ sort(f.begin(), f.end());
 ```
 
 - auto r = s.end();  // 问题：s.end() 指向末尾后一位，解引用 `*r `是非法操作
+
+- 与`for(auto& name : names)`区别：
+```cpp
+std::list<std::string> names = {"Alice", "Bob", "Charlie"};
+
+// 范围for：迭代的是元素本身
+for(auto& name : names) {  // name是std::string&
+    std::cout << name << " ";
+}
+
+// 迭代器循环：迭代的是迭代器
+for(auto it = names.begin(); it != names.end(); ++it) {  // it是list<string>::iterator
+    std::cout << *it << " ";  // 需要解引用
+}
+```
+
+### 二进制操作：
+
+```cpp
+int num = 42;  // 二进制: 00101010
+    int bits = sizeof(num) * 8;  // 获取位数（通常是32位）
+    
+    std::cout << "整数 " << num << " 的二进制位（从高位到低位）:\n";
+    
+    // 从最高位到最低位
+    for (int i = bits - 1; i >= 0; i--) {
+        int bit = (num >> i) & 1;  // 右移i位后与1进行与操作
+        std::cout << bit;
+        if (i % 8 == 0 && i != 0) std::cout << " ";  // 每8位加空格
+    }
+    std::cout << "\n";
+```
+
+### 负数的二进制表示：
+
+- **补码表示**：C++ 使用补码表示有符号整数  
+- **负数的计算**：`-x = ~x + 1`（按位取反再加1）
+- 公式$n\&(-n)$可以得到n的二进制表示的最低位1的位置
+```cpp
+由于负数是按照补码规则在计算机中存储的，−n 的二进制表示为 n 的二进制表示的每一位取反再加上 1，因此它的原理如下：
+假设 n 的二进制表示为 (a10⋯0) 
+​
+  进行按位与运算，高位全部变为 0，最低位的 1 以及之后的所有 0 不变，这样我们就获取了 n 二进制表示的最低位的 1。
+
+因此，如果 n 是正整数并且 n & (-n) = n，那么 n 就是 2 
+
+作者：力扣官方题解
+链接：https://leetcode.cn/problems/power-of-two/solutions/796201/2de-mi-by-leetcode-solution-rny3/
+
+```
