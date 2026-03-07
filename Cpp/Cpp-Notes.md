@@ -1,3 +1,17 @@
+### 基本概念：
+```cpp
+bool is_aeiou(const string &s){  // 参数是 string 类型
+    return (s=='a')||(s=='e')||(s=='i')||(s=='o')||(s=='u');
+    // 这里用 string 和字符 'a' 比较，类型不匹配
+}
+
+// 如果像判断字符是否等于元音
+bool is_aeiou_char(const char c) {
+    return c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u' ||
+           c == 'A' || c == 'E' || c == 'I' || c == 'O' || c == 'U';
+}
+```
+
 
 ### 三元表达式：
 
@@ -72,8 +86,7 @@ int num = 42;  // 二进制: 00101010
     std::cout << "\n";
 ```
 
-### 负数的二进制表示：
-
+- **负数的二进制表示：**
 - **补码表示**：C++ 使用补码表示有符号整数  
 - **负数的计算**：`-x = ~x + 1`（按位取反再加1）
 - 公式$n\&(-n)$可以得到n的二进制表示的最低位1的位置
@@ -88,4 +101,14 @@ int num = 42;  // 二进制: 00101010
 作者：力扣官方题解
 链接：https://leetcode.cn/problems/power-of-two/solutions/796201/2de-mi-by-leetcode-solution-rny3/
 
+```
+
+### 容器类：
+
+-  **关于`vector:`**
+	- 初始化：
+	- 想要一个 `n`行、`m`列 的二维向量，并且所有元素初始化为 `0`，可以这样写：
+```cpp
+int n = 3, m = 4;
+std::vector<std::vector<int>> matrix(n, std::vector<int>(m));
 ```
