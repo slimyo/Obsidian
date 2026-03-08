@@ -112,3 +112,95 @@ int num = 42;  // 二进制: 00101010
 int n = 3, m = 4;
 std::vector<std::vector<int>> matrix(n, std::vector<int>(m));
 ```
+
+- **关于set与map**：
+	- 统计**出现**用set
+		- erase和insert
+	- 统计**次数**用map
+		- map的自动插入key
+			- 访问`map[key]`时，会自动增加这个key
+			- 使用find操作防止意外增加不需要的key
+		- map的size是计算key对的数量，不会对key的value值计数
+		```cpp
+		// ❌ 危险：自动插入
+		int score1 = scores["Charlie"];  // 自动插入{"Charlie", 0}
+		cout << scores.size() << endl;   // 输出: 3
+		
+		// ✅ 方法1：使用find（推荐）
+		auto it = scores.find("David");
+		if (it != scores.end()) {
+		    cout << "David的分数: " << it->second << endl;
+		} else {
+		    cout << "David不存在" << endl;  // 不会插入
+		}
+		cout << "size: " << scores.size() << endl;  // 输出: 3
+		```
+		- map的insert操作与emplace操作：
+			- 都不会更改原来值
+			- 手动插入
+				```cpp
+				// 插入新key，value初始化为0
+				auto result = m.insert({"apple", 0});
+				if (result.second) {
+				    cout << "成功插入新key: apple" << endl;
+				} else {
+				    cout << "key已存在" << endl;
+				}
+				
+				// insert不会修改已存在的value
+				m.insert({"apple", 100});  // ❌ 不会修改，value还是0
+				
+				unordered_map<string, int> m;
+				-----------------------------------------------------------cpp11
+				// 原地构造，避免临时对象
+				auto result = m.emplace("apple", 0);  // 构造pair<string, int>("apple", 0)
+				cout << "插入成功: " << result.second << endl;  // true
+				
+				// 已存在时不会插入
+				m.emplace("apple", 100);  // 不会修改
+				-----------------------------------------------------------cpp17
+				-----------------------------------------如果key不存在，才构造value
+				m.try_emplace("apple", 0);  // 插入
+				m.try_emplace("apple", 100);  // 跳过，不会修改
+				
+				// 可以避免不必要的value构造
+				complexClass obj(100);  // 假设构造开销大
+				m.try_emplace("key", std::move(obj));  // key不存在时才移动
+				```
+	- 关于桶数量
+		- 初始化时设置的是桶的大致数量
+			- `unordered_map<string, int> m(50);  // 请求约50个桶`
+		- 可以手动优化桶数避免哈希冲突
+		```cpp
+		// 方法A：reserve（推荐）
+		unordered_set<int> set_a;
+		set_a.reserve(data.size());  // 预留空间，避免rehash
+		set_a.insert(data.begin(), data.end());
+		
+		// 方法B：构造函数指定桶数
+		size_t expected_size = data.size();
+		unordered_set<int> set_b(expected_size);  // 指定桶数
+		set_b.insert(data.begin(), data.end());
+		
+		// 方法C：精确控制负载因子
+		unordered_set<int> set_c;
+		set_c.max_load_factor(0.5);  // 更低的冲突率
+		set_c.reserve(data.size());  // 需要更多桶
+		set_c.insert(data.begin(), data.end());
+
+		```
+
+- list类
+	- insert(iterator,n):表示在迭代器前面插入
+	- ## 总结表格
+
+|特性|std::list|
+|---|---|
+|**索引访问**​|❌ 不支持 `list[index]`|
+|**删除第一个元素**​|`pop_front()`或 `erase(begin())`|
+|**默认大小**​|0|
+|**预分配内存**​|❌ 没有 `reserve()`|
+|**高效初始化**​|`list(n, value)`或批量构造|
+|**size() 复杂度**​|O(1) (C++11起)|
+|**中间插入删除**​|✅ O(1)|
+|**内存连续性**​|❌ 不连续|
