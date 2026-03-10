@@ -69,6 +69,49 @@ for(auto it = names.begin(); it != names.end(); ++it) {  // it是list<string>::i
 }
 ```
 
+- **反向迭代器:**
+```cpp
+// 反向遍历 vector
+for (auto rit = vec.rbegin(); rit != vec.rend(); ++rit) {
+    std::cout << *rit << " ";  // 输出: 5 4 3 2 1
+}
+
+// 使用范围for循环（C++11起）
+std::vector<int> reversed(vec.rbegin(), vec.rend());
+// 或直接反向处理
+for (int value : std::vector<int>(vec.rbegin(), vec.rend())) {
+    // 反向处理元素
+}
+```
+
+- **使用迭代器插入后，原迭代器失效**
+```cpp
+std::string str = "ABCD";
+auto it = str.begin() + 2;  // 指向 'C'
+
+// ❌ 错误：插入后it失效，不要使用
+str.insert(it, 'X');
+// it 现在无效，不能使用
+// std::cout << *it;  // 未定义行为
+
+// ✅ 正确：使用返回值
+it = str.insert(it, 'X');  // 返回插入位置的迭代器
+// it 现在指向新插入的 'X'
+// 继续使用it是安全的
+++it;  // 现在指向原来的 'C'
+```
+
+## 完整的迭代器类型对比
+
+|迭代器类型|声明方式|能否修改元素|能否移动迭代器|
+|---|---|---|---|
+|正向迭代器|`auto it = s.begin();`|✓|✓|
+|常量正向迭代器|`auto cit = s.cbegin();`|✗|✓|
+|反向迭代器|`auto rit = s.rbegin();`|✓|✓|
+|常量反向迭代器|`auto crit = s.crbegin();`|✗|✓|
+|迭代器的常量引用|`const auto& it_ref = s.begin();`|✓|✗ (引用本身)|
+|元素的常量引用|`const auto& elem = *it;`|✗ (通过该引用)|✓|
+
 ### 二进制操作：
 
 ```cpp
