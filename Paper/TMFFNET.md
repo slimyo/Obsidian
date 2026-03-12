@@ -42,6 +42,7 @@ ISSN：1507-2711
 分区：大类3，小类4
 金额：750.00 欧元
 
+- 非OA：
 - engineering failure analysis
 2/1区
 
@@ -57,7 +58,7 @@ International Journal of Advanced Manufacturing Technology
 - 人工智能和进化计算技术在制造作  中的应用 
 
 - Journal Of Vibration And Control
-该期刊是一本同行评审的关于振动现象及其控制的分析、计算和实验研究杂志。范围包括所有线性和非线性振动现象，主题包括: 结构和机械的振动和控制、信号分析、气动弹性、神经网络、结构控制和声学、噪声和噪声控制、固体和流体中的波动以及冲击波。
+关于振动现象及其控制的分析、计算和实验研究杂志。范围包括所有线性和非线性振动现象，主题包括: 结构和机械的振动和控制、信号分析、气动弹性、神经网络、结构控制和声学、噪声和噪声控制、固体和流体中的波动以及冲击波。
 3/3
 1077-5463
 
@@ -74,8 +75,9 @@ International Journal of Advanced Manufacturing Technology
 		- **(Conv) - 卷积层**：用于提取特征。
 		- **B (Batch Normalization) - 批归一化**：加速网络训练收敛速度，减少模型对初始权重的敏感度，提高模型的泛化能力。
 		- **R (ReLU) - 激活函数**：引入非线性因素，让神经网络能够学习更复杂的特征。
-	- BU-Guided Fusion
-	- $$F_{i+1}^{'}=\mu *F_i+ ({1− \mu } )*u({F_{i+1}})$$其中加权系数（Adaptive Gate）：$$μ=σ(W∗Concat(F_i,u({F_{i+1}}\text{) ))}$$这相当于智能的特征混合器。它通过学习输入特征本身，生成一个空间自适应的权重图，来精细化地控制不同层级特征的融合比例，从而获得同时具备丰富细节和强语义的融合特征
+	- BU-Guided Fusion自底而上的引导式特征融合
+	- $$F_{i+1}^{'}=\mu *F_i+ ({1− \mu } )*u({F_{i+1}})$$其中加权系数（Adaptive Gate）：$$μ=σ(W∗Concat(F_i,u({F_{i+1}}\text{) ))}$$上采样函数u，对齐特征维度。
+这相当于智能的特征混合器。它通过学习输入特征本身，生成一个空间自适应的权重图，来精细化地控制不同层级特征的融合比例，从而获得同时具备丰富细节和强语义的融合特征
 	- 模型参数设置和解释
 	- 参数设置：
 
@@ -113,10 +115,14 @@ International Journal of Advanced Manufacturing Technology
 	  def mutiDomainFeaturesMaker(self, data, frame_len=1024, num_frames=8):  
     """  
     将 (N, 2048) 数据转换为 (N, num_frames, 35)  
-    Args:        data: numpy array or torch tensor, shape [N, 2048]        frame_len: 每帧长度  
-        num_frames: 输出帧数（固定）  
+    Args:        
+    data: numpy array or torch tensor, shape [N, 2048]        
+    frame_len: 每帧长度  
+    num_frames: 输出帧数（固定）  
   
-    Returns:        features: torch tensor, shape [N, num_frames, 35]    """
+    Returns:        
+    features: torch tensor, shape [N, num_frames, 35]    
+    """
 	```
 
 - 训练过程
