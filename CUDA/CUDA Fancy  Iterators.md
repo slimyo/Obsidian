@@ -38,3 +38,28 @@ auto squared_differences = thrust::make_transform_iterator(
       return (value - mean) * (value - mean);
     });
 ```
+
+- Below is an example of the `transform` iterator API:
+
+```c++
+
+int constant = 2;
+auto transform_it = thrust::make_transform_iterator(
+    // iterator to the beginning of the input sequence
+    vector.begin(),
+    // capture constant in the lambda by value with `[name]`
+    [constant]__host__ __device__(float value_from_input_sequence) {
+      // transformation of each element
+      return value_from_input_sequence * constant;
+    });
+```
+
+
+### 计数
+  
+- Here's an example of the Counting iterator API:
+
+```c++
+// start counting from 0
+auto count_it = thrust::make_counting_iterator(0);
+```
