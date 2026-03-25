@@ -5,6 +5,16 @@
 - threadIdx
 - thread_index = blockDim * blockIdx + threadIdx
 
+```cpp
+// 线程和块是二维的
+dim3 blockDim(16, 16);  // 块大小：16×16线程
+dim3 gridDim(64, 64);   // 网格大小：64×64块
+
+// 在kernel中：
+int col = blockIdx.x * blockDim.x + threadIdx.x;  // 列索引
+int row = blockIdx.y * blockDim.y + threadIdx.y;  // 行索引
+```
+
 ## 基本概念
 
 ### SM（Streaming Multiprocessor）
