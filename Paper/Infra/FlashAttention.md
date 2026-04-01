@@ -31,6 +31,7 @@
 则块内:$$m(x^{(i)})=max_j(x_j^{(i)})$$计算：$$f(x^{(i)})=[e^{x_1-m(x)}...e^{x_B-m(x)}]$$和：$$l(x^{(i)})=\sum_j f(x)_j$$则：$$softmax(x^{(i)})=\frac{f(x)}{l(x)}$$对于多个块，合并后的原向量行(2个为例)：$$x=concat[x^{(1)},x^{(2)}]$$有：$$max(x)=max_i(m(x^{(i)}))$$且（相当于用e指数系数重新规范化f）:$$f(x)=[...e^{m(x^{(i)})-m(x)}*f(x^{(i)})...]$$和（重新规范化l）:$$l(x)=\sum_i e^{m(x^{(i)})-m(x)}*l(x^{(i)})$$
 $$softmax(x)=\frac{f(x)}{l(x)}$$
 
+
 ---
 
 - 算法：
@@ -58,3 +59,36 @@ $$softmax(x)=\frac{f(x)}{l(x)}$$
 
 # FLASHAttention-2
 
+- 算法：减少非矩阵运算的FLOPs（现代GPU对矩阵运算优化良好）
+
+- FLASH1如下：
+![[FLASH2.png]]
+
+1. 原：$$O^{(2)}=diag(\frac{l^{(1)}}{l^{(2)}})^{-1}O^{(1)}+diag({l^{(2)}})^{-1}e^{S^{(2)}-m^{(2)}}V^{(2)}$$我们改为使用未伸缩的$O^{(2)}$,最后一步才使用l将其变为输出：$$\hat O^{(2)}=diag({l^{(1)}})^{-1}O^{(1)}+e^{S^{(2)}-m^{(2)}}V^{(2)}$$
+2. 反向过程，不用分别保存$max{m^{(j)}}$和$e^{l^{(j)}}$,只需:$$logsumexpL^{(j)}=m^{(j)}+log(l^{(j)})$$
+
+
+---
+
+- forward算法：
+	- 输入：$Q，K，V\in \mathbb R^{N\times d}$（HBM），需要大小为M的片上SRAM
+	- 块大小:$B_c=\lceil \frac{M}{4d}\rceil$,$B_r=min(\lceil \frac{M}{4d}\rceil,d)$
+	- 初始化：$O=(0)_{N\times d},l=(0)_N,m=(-\infty)_N$,在(HBM)
+	- O，logsumexp L，Q分成$T_r=\lceil \frac{N}{B_r}\rceil$块;K,V分成$T_c=\lceil \frac{N}{B_c}\rceil$块
+	- $for 1\le i \le T_c do$ :
+		- 从HBM加载$Q_i$
+		- 初始化：$O_i^{(0)}=(0)_{B_r\times d},l_i^{(0)}=(0)_{B_r},m_i^{(0)}=(-\infty)_{B_r}$,在(HBM)
+		- $for 1\le j \le T_r do$ :
+			- 从HBM加载$K_j,V_j$
+			- $S_{i}^{(j)}=Q_iK^T_j\in \mathbb R^{B_r\times B_c}$
+			- $m_{ij}=max(m_i^{(j-1)},rowmax(S_{i}^{(j)})\in \mathbb R^{B_r})$
+			- $\hat P_{ij}=e^{S_{ij}- m_{ij}}\in \mathbb R^{B_r\times B_c}$
+			- $l_{ij}=e^{m_i^{(j-1)}-m_i^{(j)}}l_i^{(j-1)}+rowsum(\hat P_{ij})\in \mathbb R^{B_r}$
+			- $l_i^{new}=e^{m_{i}- m_{i}^{new}}l_i+e^{\hat m_{ij}- m_{i}^{new}}\hat l_{ij}$
+			- $O_i^{{j}}=diag(e^{m_i^{(j-1)}-m_i^{(j)}})^{-1}O_i^{(j-1)}+\hat P_{i}^{(j)}V_j$
+			- 更新$O_i,l_i,m_i$为new版本到HBM
+		- end for
+	- end for
+	- Return O
+
+---
