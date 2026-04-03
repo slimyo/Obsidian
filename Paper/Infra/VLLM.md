@@ -1,0 +1,23 @@
+# vLLM
+- 现有LLM服务系统管理KVcache不高效
+	- 原因：KVcache在内存空间中临近存放
+	![[vLLM1.png|1000|800]]
+	- 导致不高效：内存分片、内存共享问题
+		- 为存放KVcache，预留空间一过长（输入的最大长度）。且没用到的内存块不能充分利用。
+		- 由于不同序列的KVcahce存放不相邻，序列间可能可以共享的KV内存不能共享使用
+- 解决：PagedAttention
+	- 将请求的KVcache分成大小相同的多个块
+	- 类比：块--页，tokens-bytes，request-进程
+- LLM服务：
+	- request：根据提示词prompt给出输出词元token
+	- sequence：prompt和token拼接结果
+	- 服务响应请求的两个阶段：
+		- prompt：根据提示词计算首个token
+		- autoregressive generation：根据目前sequence自回归计算结果
+	- batching techniques：批处理
+		- 核心：合并多个请求共享模型权重，分摊权重移动的开销。
+	- 内存挑战：
+		- KV cahce很大
+		- decoding算法复杂
+		- 未知输入输出长度的调度：KVcache可能耗尽缓冲，系统要决策删除或交换部分缓冲
+	- 

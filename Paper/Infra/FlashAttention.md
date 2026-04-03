@@ -94,7 +94,7 @@ $$softmax(x)=\frac{f(x)}{l(x)}$$
 		- 不同Q块可独立计算，不需要跨block通信。
 	- GPU有多个Streaming Multiprocessor (SM)，每个SM可以运行一个或多个 thread block（线程块）。
 		- **FA1**：主要并行在 batch × heads 维度。一个 thread block 通常负责整个 head，在 block 内部执行“外循环 KV blocks、内循环 Q blocks”。thread block 数量较少，SM occupancy 较低。
-		- **FA2**：外循环改为 over Q blocks，每个 thread block **只负责一个固定的 $Q_i$ block**（$Q_i $保持 stationary），内循环遍历所有 KV blocks。不同 Q blocks 的 thread block **完全独立、无需任何 block 间通信**，显著提升 occupancy。
+		- **FA2**：外循环改为 over Q blocks，每个 thread block **只负责一个固定的 $Q_i$ block**（$Q_i$保持 stationary），内循环遍历所有 KV blocks。不同 Q blocks 的 thread block **完全独立、无需任何 block 间通信**，显著提升 occupancy。
 	- warp层面：一个 thread block 通常有 4~8 warps（每个 warp = 32 threads）
 		- FA1：把 K 和 V 沿着列方向切分给不同 warp
 			- 每个先计算$Q × K_slice^T$（得到部分 S slice），然后写入共享内存
@@ -150,3 +150,5 @@ $$softmax(x)=\frac{f(x)}{l(x)}$$
 	dQ_i&\leftarrow dQ_i+dS_i^jK_j\in \mathbb R^{(B_r\times d)}\\
 	dK_j&\leftarrow dK_j+dS_i^jQ_i\in \mathbb R^{(B_c\times d)}
 	\end{align*}$$
+---
+
