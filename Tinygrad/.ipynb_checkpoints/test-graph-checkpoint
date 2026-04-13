@@ -1,0 +1,6 @@
+// 测试图
+digraph {
+	A [label="节点 A"]
+	B [label="节点 B"]
+	A -> B [label="连接"]
+}
