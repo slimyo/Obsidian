@@ -4,7 +4,6 @@
 - 通过多Patch大小投影 + Any-variate Attention + 混合分布头三大架构创新，在LOTSA（27B+观测值、9大领域）上统一预训练后，实现零样本（zero-shot）预测，性能可与甚至超越大量全样本（full-shot）专用模型，同时开源了Uni2TS统一训练框架。
 
 这是**时序Foundation Model的里程碑**：从“One model per dataset”转向“**一个大模型打遍所有时序预测任务**”（universal forecasting），直接解决跨频率、任意变量数、分布异质性三大核心挑战。
-
 ### 1. 背景与动机（为什么需要“Universal Forecasting”？）
 
 传统时序预测是**“一个数据集训一个模型”**（one-model-per-dataset），高度碎片化，无法利用大规模预训练的红利。

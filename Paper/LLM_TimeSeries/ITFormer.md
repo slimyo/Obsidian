@@ -1,4 +1,4 @@
-**《ITFormer: Bridging Time Series and Natural Language for Multi-Modal QA with Large-Scale Multitask Dataset》论文解读** （arXiv:2506.20093，2025，作者：Yilin Wang, Peixuan Lei 等，ICML 2025）
+《ITFormer: Bridging Time Series and Natural Language for Multi-Modal QA with Large-Scale Multitask Dataset》（arXiv:2506.20093，2025，作者：Yilin Wang, Peixuan Lei 等，ICML 2025）-上海交通大学
 
 **一句话核心思想**： **ITFormer提出“Instruct Time Transformer”框架 + EngineMT-QA数据集，把时间序列编码器与冻结LLM无缝桥接，实现真正的多模态（时间序列+自然语言）Question Answering（Time-Series QA），仅用<1%额外可训参数，就能在工业监控、故障诊断、风险预测、决策等复杂交互任务上大幅超越现有多模态基线。**
 
