@@ -1,11 +1,11 @@
-### 1. 论文基本信息
 
-- **标题**：TimeOmni-1: Incentivizing Complex Reasoning with Time Series in Large Language Models
-- **作者**：Tong Guan（第一作者）、Zijie Meng、Dianqi Li 等（通讯作者：Ming Jin、Shirui Pan）
-- **会议**：ICLR 2026（Poster）
-- **arXiv**：2509.24803（v3，2026年2月24日最终版）
-- **代码与模型**：GitHub（AntonGuan/TimeOmni-1）、Hugging Face（anton-hugging/TimeOmni-1-7B）公开可用
-- **核心创新**：首次系统化构建时间序列**复杂推理**（而非简单模式识别）任务套件，并提出首个统一的时间序列推理大模型 TimeOmni-1。
+TimeOmni-1: Incentivizing Complex Reasoning with Time Series in Large Language Models
+Tong Guan,ICLR 2026（Poster）**arXiv**：2509.24803（v3，2026-2-24）
+GitHub（AntonGuan/TimeOmni-1）、Hugging Face（anton-hugging/TimeOmni-1-7B）
+
+首次系统化构建时间序列**复杂推理**（而非简单模式识别）任务套件，并提出首个统一的时间序列推理大模型 TimeOmni-1。
+
+核心思想：TimeOmni-1 的核心思想并非简单的多任务学习，而是通过构建面向时序推理的任务体系（TSR-Suite），将推理能力分解为感知、外推与决策三个层次，并通过任务设计、数据构建与奖励机制联合驱动，使模型在解决任务过程中被迫执行多步推理，从而显式激励大语言模型形成跨任务的时序推理能力。
 
 ### 2. 研究背景与动机
 
@@ -31,8 +31,10 @@
 |**Decision Making**|决策|离散选择|感知+外推 → 效用最大化动作|电池充放电策略（结合电价、负载预测、SoC约束）|
 
 - **数据集构建**：10个真实领域原始数据 → LLM初步CoT生成 → 人工分层审核（充分性、模板一致性）→ 2.3K高质量种子 + 自动扩展至23K+。
-- **关键设计**：强制CoT格式（<think>...</think><answer>...</answer>），确保模型必须“一步步思考”而非直接输出答案。
+- **关键设计**：强制CoT(Chain-of-Thoughts)格式（\<think>...\</think><answer>...</answer>），确保模型必须“一步步思考”而非直接输出答案。
 - **ID/OOD拆分**：支持鲁棒性评估。
+
+![[TSR-SUITE.png]]
 
 ### 5. TimeOmni-1 模型设计（两阶段训练）
 
@@ -48,12 +50,15 @@
 
 - 使用**GRPO**（Group Relative Policy Optimization）算法。
 - **奖励函数**（双重设计）：
-    - **格式奖励**：强制<think>…</think><answer>…</answer>结构。
+    - **格式奖励**：强制模式。
     - **任务奖励**：离散任务用精确匹配；序列预测用exp(-α·MAE) + 有效点数奖励。
 - **KL正则**防止偏离参考策略。
 - **关键洞见**：**无SFT先验的纯RL会崩坏**；联合训练后各任务相互促进（感知→决策的渐进能力迁移）。
 
-最终实现“**一次训练，全任务通用**”。
+#### 发现实现“**一次训练，跨任务通用**”。
+
+- 渐进能力迁移&补充：progressive capability transfor&supplement：在多种任务联合训练下，学习收益互补
+- 联合训练下在ID testbed效果显著
 
 ### 6. 实验结果（亮点）
 
