@@ -15,3 +15,6 @@ self.data: np.ndarray = data
 self.data = data
 # 但添加了类型提示：self.data 应该是 np.ndarray 类型
 ```
+
+
+---
