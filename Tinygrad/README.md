@@ -4,6 +4,8 @@
 - 参考笔记
 [Tutorials on Tinygrad | tinygrad-notes](https://mesozoic-egg.github.io/tinygrad-notes/)
 
+- 参考资料
+[tinygrad/tinygrad | DeepWiki](https://deepwiki.com/tinygrad/tinygrad/1-overview)
 ## 🎯 学习目标
 
 理解从**计算图**到**硬件指令**的完整路径，掌握 Buffer 管理和算子调度的核心原理。
