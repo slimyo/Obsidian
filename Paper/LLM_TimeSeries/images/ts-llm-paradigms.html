@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM × 时序 — 范式全解</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1a20;
+  --paper: #f5f2eb;
+  --paper2: #ede9e0;
+  --paper3: #e3ddd2;
+  --rule: rgba(26,26,32,0.12);
+  --muted: #7a7060;
+  --accent: #c0392b;
+
+  --p1: #2c5f8a;
+  --p2: #1a7a4a;
+  --p3: #7a4a1a;
+  --p4: #6a1a7a;
+  --p5: #1a5a7a;
+  --p6: #7a1a3a;
+  --p7: #3a6a1a;
+  --p8: #5a3a1a;
+  --p9: #1a3a6a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans SC', serif;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.7;
+}
+
+/* ── NOISE TEXTURE overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ── MASTHEAD ── */
+.masthead {
+  border-bottom: 3px double var(--ink);
+  padding: 48px 60px 36px;
+  position: relative;
+  background: var(--paper);
+}
+.masthead-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.kicker {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}
+h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(36px, 5vw, 72px);
+  line-height: 1.0;
+  letter-spacing: -1px;
+  color: var(--ink);
+  max-width: 700px;
+}
+h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+.masthead-meta {
+  text-align: right;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 2;
+}
+.masthead-deck {
+  margin-top: 20px;
+  font-size: 15px;
+  color: var(--muted);
+  max-width: 680px;
+  border-top: 1px solid var(--rule);
+  padding-top: 16px;
+}
+
+/* ── NAV (sticky) ── */
+.nav-strip {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: var(--ink);
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 2px solid var(--accent);
+}
+.nav-strip::-webkit-scrollbar { display: none; }
+.nav-btn {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.45);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.nav-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.nav-btn.active { color: #fff; background: var(--accent); }
+
+/* ── CONTENT ── */
+main {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 48px 60px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── VIEW toggle ── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── OVERVIEW GRID ── */
+.overview-intro {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+  margin-bottom: 48px;
+  align-items: start;
+}
+.overview-text h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  margin-bottom: 16px;
+}
+.overview-text p { font-size: 14px; color: var(--muted); line-height: 1.85; margin-bottom: 12px; }
+.stat-box {
+  background: var(--ink);
+  color: #fff;
+  padding: 28px;
+  border-radius: 4px;
+}
+.stat-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.stat-row:last-child { border-bottom: none; }
+.stat-num { font-family: 'DM Serif Display', serif; font-size: 32px; color: #f5f2eb; }
+.stat-label { font-family: 'DM Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.4); }
+
+.paradigm-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-bottom: 48px;
+  border: 2px solid var(--ink);
+}
+.pov-card {
+  padding: 24px 20px;
+  background: var(--paper2);
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.pov-card:hover { background: var(--paper3); }
+.pov-number {
+  font-family: 'DM Serif Display', serif;
+  font-size: 52px;
+  opacity: 0.06;
+  position: absolute;
+  bottom: -8px; right: 8px;
+  line-height: 1;
+  pointer-events: none;
+}
+.pov-code {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.pov-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 17px;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+.pov-tagline { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.pov-papers {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.pov-tag {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background: rgba(26,26,32,0.07);
+  color: var(--muted);
+}
+
+/* ── PARADIGM DETAIL PAGE ── */
+.paradigm-detail { display: none; }
+.paradigm-detail.active { display: block; }
+
+.pd-header {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  padding: 32px 40px;
+  border-left: 5px solid var(--ink);
+  margin-bottom: 40px;
+  background: var(--paper2);
+  border-radius: 0 4px 4px 0;
+}
+.pd-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 80px;
+  line-height: 1;
+  opacity: 0.12;
+  flex-shrink: 0;
+}
+.pd-meta {}
+.pd-code {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.pd-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: clamp(22px, 3vw, 38px);
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+.pd-subtitle { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 680px; }
+
+/* Core mechanism diagram */
+.mechanism-section {
+  margin-bottom: 40px;
+}
+.section-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.section-rule-line { flex: 1; height: 1px; background: var(--rule); }
+.section-rule-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mechanism-box {
+  background: var(--ink);
+  color: #f5f2eb;
+  border-radius: 4px;
+  padding: 32px 36px;
+  margin-bottom: 24px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.mech-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  margin: 20px 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+}
+.mech-step {
+  background: rgba(255,255,255,0.08);
+  padding: 10px 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.12);
+  text-align: center;
+  min-width: 100px;
+  line-height: 1.4;
+}
+.mech-step .step-label { color: rgba(255,255,255,0.4); font-size: 9px; margin-bottom: 3px; }
+.mech-step .step-val { color: #fff; font-size: 11px; }
+.mech-arrow {
+  padding: 0 10px;
+  color: rgba(255,255,255,0.25);
+  font-size: 18px;
+}
+.mech-desc {
+  color: rgba(245,242,235,0.65);
+  font-size: 13px;
+  line-height: 1.8;
+  margin-top: 12px;
+}
+
+/* Key components */
+.key-components {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.kc-item {
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 16px 18px;
+}
+.kc-icon { font-size: 20px; margin-bottom: 8px; }
+.kc-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+.kc-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* Paper cards */
+.paper-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+  margin-bottom: 40px;
+}
+.pc {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+.pc-head {
+  padding: 20px 24px 16px;
+  background: var(--paper2);
+  border-bottom: 1px solid var(--rule);
+}
+.pc-venue {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.pc-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 17px;
+  line-height: 1.3;
+}
+.pc-body { padding: 20px 24px; }
+.pc-field {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+.pc-field:first-child { margin-top: 0; }
+.pc-content { font-size: 13px; color: #444; line-height: 1.7; }
+.pc-steps { display: flex; flex-direction: column; gap: 6px; }
+.pc-step {
+  display: flex;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #444;
+  align-items: flex-start;
+}
+.pc-step-n {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  margin-top: 1px;
+  border: 1px solid currentColor;
+}
+.pc-insight {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 3px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  border-left: 3px solid;
+}
+.pc-code-block {
+  margin-top: 12px;
+  background: var(--ink);
+  color: #a8e6cf;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 14px 16px;
+  border-radius: 3px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.pc-code-block .comment { color: rgba(168,230,207,0.4); }
+
+/* Pros/Cons */
+.proscons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.pros, .cons {
+  padding: 20px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.pros { background: rgba(26,122,74,0.06); border: 1px solid rgba(26,122,74,0.2); }
+.cons { background: rgba(192,57,43,0.06); border: 1px solid rgba(192,57,43,0.2); }
+.pros h4 { color: #1a7a4a; font-family: 'DM Mono', monospace; font-size: 11px; margin-bottom: 10px; letter-spacing: 1px; }
+.cons h4 { color: var(--accent); font-family: 'DM Mono', monospace; font-size: 11px; margin-bottom: 10px; letter-spacing: 1px; }
+.pros li, .cons li { margin-left: 16px; margin-bottom: 5px; line-height: 1.55; color: #555; font-size: 12.5px; }
+
+/* Comparison table */
+.comp-table-wrap { overflow-x: auto; margin-bottom: 48px; }
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  min-width: 800px;
+}
+.comp-table th {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--ink);
+  color: rgba(255,255,255,0.6);
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.comp-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+  vertical-align: top;
+  line-height: 1.55;
+  color: #444;
+}
+.comp-table tr:hover td { background: rgba(26,26,32,0.02); }
+.ct-tag {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  margin: 1px;
+  background: rgba(26,26,32,0.06);
+  color: #666;
+}
+.yes { color: #1a7a4a; font-weight: 600; font-family: 'DM Mono', monospace; font-size: 11px; }
+.no { color: #bbb; font-family: 'DM Mono', monospace; font-size: 11px; }
+.partial { color: #7a4a1a; font-weight: 600; font-family: 'DM Mono', monospace; font-size: 11px; }
+
+/* back button */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 32px;
+  border: none;
+  background: transparent;
+  transition: color 0.15s;
+  text-transform: uppercase;
+}
+.back-btn:hover { color: var(--ink); }
+.back-btn::before { content: '←'; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .masthead, main { padding-left: 24px; padding-right: 24px; }
+  .overview-intro { grid-template-columns: 1fr; }
+  .paradigm-overview-grid { grid-template-columns: 1fr 1fr; }
+  .paper-cards-grid { grid-template-columns: 1fr; }
+  .proscons { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .paradigm-overview-grid { grid-template-columns: 1fr; }
+}
+
+/* color theming per paradigm */
+.c1 { --pc: var(--p1); }
+.c2 { --pc: var(--p2); }
+.c3 { --pc: var(--p3); }
+.c4 { --pc: var(--p4); }
+.c5 { --pc: var(--p5); }
+.c6 { --pc: var(--p6); }
+.c7 { --pc: var(--p7); }
+.c8 { --pc: var(--p8); }
+.c9 { --pc: var(--p9); }
+
+.pd-header { border-left-color: var(--pc, var(--ink)); }
+.pc-step-n { color: var(--pc, var(--ink)); }
+.pc-insight { border-left-color: var(--pc, var(--ink)); background: rgba(0,0,0,0.03); color: #444; }
+.pov-code { color: var(--pc, var(--muted)); }
+
+/* highlight rows */
+.hi { background: rgba(26,26,32,0.03) !important; }
+
+/* footnote */
+.footnote {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  line-height: 1.8;
+}
+
+/* animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pov-card { animation: fadeUp 0.4s both; }
+.pov-card:nth-child(1) { animation-delay: 0.05s; }
+.pov-card:nth-child(2) { animation-delay: 0.1s; }
+.pov-card:nth-child(3) { animation-delay: 0.15s; }
+.pov-card:nth-child(4) { animation-delay: 0.2s; }
+.pov-card:nth-child(5) { animation-delay: 0.25s; }
+.pov-card:nth-child(6) { animation-delay: 0.3s; }
+.pov-card:nth-child(7) { animation-delay: 0.35s; }
+.pov-card:nth-child(8) { animation-delay: 0.4s; }
+.pov-card:nth-child(9) { animation-delay: 0.45s; }
+</style>
+</head>
+<body>
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-top">
+    <div>
+      <div class="kicker">Research Survey · LLM in Time Series · 2024–2025</div>
+      <h1>九大范式<br><em>完全解构</em></h1>
+    </div>
+    <div class="masthead-meta">
+      覆盖范式 · 9<br>
+      精选论文 · 26+<br>
+      顶会/顶刊 · NeurIPS / ICML<br>
+      ICLR / AAAI / KDD / TKDE
+    </div>
+  </div>
+  <p class="masthead-deck">系统梳理大语言模型应用于时间序列领域的九种技术范式：从 Token 化策略、参数冻结到推理链增强、扩散生成与 RAG 检索，每种范式附核心机制图解、代表论文深析与优劣对比。</p>
+</div>
+
+<!-- NAV -->
+<nav class="nav-strip">
+  <button class="nav-btn active" onclick="showView('overview', this)">总览</button>
+  <button class="nav-btn" onclick="showView('p1', this)">P1 · Token化生成</button>
+  <button class="nav-btn" onclick="showView('p2', this)">P2 · 冻结+适配</button>
+  <button class="nav-btn" onclick="showView('p3', this)">P3 · In-Context</button>
+  <button class="nav-btn" onclick="showView('p4', this)">P4 · 语义/多模态</button>
+  <button class="nav-btn" onclick="showView('p5', this)">P5 · 统一基础模型</button>
+  <button class="nav-btn" onclick="showView('p6', this)">P6 · 推理链/RL</button>
+  <button class="nav-btn" onclick="showView('p7', this)">P7 · Agent/工具调用</button>
+  <button class="nav-btn" onclick="showView('p8', this)">P8 · 扩散生成</button>
+  <button class="nav-btn" onclick="showView('p9', this)">P9 · RAG增强</button>
+  <button class="nav-btn" onclick="showView('matrix', this)">全局矩阵</button>
+</nav>
+
+<main>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- OVERVIEW -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-overview" class="view active">
+
+  <div class="overview-intro">
+    <div class="overview-text">
+      <h2>为什么 LLM 遇见时序？</h2>
+      <p>时间序列建模长期依赖领域专用架构（LSTM、Transformer 变体、状态空间模型），但这类方法缺乏跨域泛化能力。大语言模型凭借海量预训练获得了强大的模式识别、上下文推理与世界知识，为时序分析提供了全新基础。</p>
+      <p>然而"LLM 如何参与时序"并非唯一答案，研究社区已演化出<strong>九种截然不同的范式</strong>，在参数效率、任务覆盖、可解释性、工程成本等维度各有权衡。理解范式边界是选择正确技术路线的前提。</p>
+      <p>以下分类参考了 ICML 2024 Survey（Jin et al., 2024）及近期顶会成果，结合工程视角整理而成。</p>
+    </div>
+    <div class="stat-box">
+      <div class="stat-row"><span class="stat-num">9</span><span class="stat-label">技术范式</span></div>
+      <div class="stat-row"><span class="stat-num">26+</span><span class="stat-label">精选论文</span></div>
+      <div class="stat-row"><span class="stat-num">2022→</span><span class="stat-label">时间跨度</span></div>
+      <div class="stat-row"><span class="stat-num">5类</span><span class="stat-label">核心下游任务</span></div>
+    </div>
+  </div>
+
+  <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">点击任意卡片进入详细解析</div><div class="section-rule-line"></div></div>
+
+  <div class="paradigm-overview-grid">
+
+    <div class="pov-card c1" onclick="showView('p1', document.querySelector('.nav-btn:nth-child(2)'))">
+      <div class="pov-number">1</div>
+      <div class="pov-code" style="color:var(--p1)">Paradigm 01</div>
+      <div class="pov-title">Token 化自回归生成</div>
+      <div class="pov-tagline">将时序量化/Patch化为离散 Token，直接用 LLM 架构做自回归预测，是最"正统"的语言模型范式迁移。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">Chronos</span><span class="pov-tag">Timer</span><span class="pov-tag">Lag-Llama</span><span class="pov-tag">TimeGPT</span>
+      </div>
+    </div>
+
+    <div class="pov-card c2" onclick="showView('p2', document.querySelector('.nav-btn:nth-child(3)'))">
+      <div class="pov-number">2</div>
+      <div class="pov-code" style="color:var(--p2)">Paradigm 02</div>
+      <div class="pov-title">冻结 LLM + 轻量适配</div>
+      <div class="pov-tagline">锁住 LLM 大部分权重，仅训练小型 Adapter/Reprogramming 层，以极低成本复用语言先验。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">One Fits All</span><span class="pov-tag">Time-LLM</span><span class="pov-tag">LLM4TS</span><span class="pov-tag">TEMPO</span>
+      </div>
+    </div>
+
+    <div class="pov-card c3" onclick="showView('p3', document.querySelector('.nav-btn:nth-child(4)'))">
+      <div class="pov-number">3</div>
+      <div class="pov-code" style="color:var(--p3)">Paradigm 03</div>
+      <div class="pov-title">In-Context Learning</div>
+      <div class="pov-tagline">无需任何参数更新，将历史序列序列化后拼入 Prompt，利用 LLM 上下文学习能力零样本预测。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">ICTS Predictor</span><span class="pov-tag">LLMTime</span><span class="pov-tag">GPT4TS</span>
+      </div>
+    </div>
+
+    <div class="pov-card c4" onclick="showView('p4', document.querySelector('.nav-btn:nth-child(5)'))">
+      <div class="pov-number">4</div>
+      <div class="pov-code" style="color:var(--p4)">Paradigm 04</div>
+      <div class="pov-title">语义增强 / 多模态融合</div>
+      <div class="pov-tagline">引入自然语言描述、元数据或图像信号，与时序数值联合建模，实现跨模态推理与可解释输出。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">Time-LLM</span><span class="pov-tag">ITFormer</span><span class="pov-tag">Semantic-TS</span><span class="pov-tag">MMAD</span>
+      </div>
+    </div>
+
+    <div class="pov-card c5" onclick="showView('p5', document.querySelector('.nav-btn:nth-child(6)'))">
+      <div class="pov-number">5</div>
+      <div class="pov-code" style="color:var(--p5)">Paradigm 05</div>
+      <div class="pov-title">统一多任务基础模型</div>
+      <div class="pov-tagline">单一架构、单一权重集，统一处理预测/分类/填补/异常检测等多任务，跨域零样本迁移。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">Moirai</span><span class="pov-tag">TIME-MOE</span><span class="pov-tag">UniTime</span><span class="pov-tag">MOMENT</span>
+      </div>
+    </div>
+
+    <div class="pov-card c6" onclick="showView('p6', document.querySelector('.nav-btn:nth-child(7)'))">
+      <div class="pov-number">6</div>
+      <div class="pov-code" style="color:var(--p6)">Paradigm 06</div>
+      <div class="pov-title">推理链 / RL 后训练</div>
+      <div class="pov-tagline">借助 CoT、Scratchpad 或强化学习后训练（GRPO/PPO），激励 LLM 对时序进行深层因果推理。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">TimeOmni-1</span><span class="pov-tag">Chain-of-Thought TS</span>
+      </div>
+    </div>
+
+    <div class="pov-card c7" onclick="showView('p7', document.querySelector('.nav-btn:nth-child(8)'))">
+      <div class="pov-number">7</div>
+      <div class="pov-code" style="color:var(--p7)">Paradigm 07</div>
+      <div class="pov-title">LLM as Agent / 工具调用</div>
+      <div class="pov-tagline">LLM 扮演调度中枢，主动检索外部事件（新闻/公告）、调用统计工具或优化训练数据，通过多 Agent 协作与反思迭代完成复杂时序分析。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">News-to-Forecast</span><span class="pov-tag">DCATS</span><span class="pov-tag">MLZero</span>
+      </div>
+    </div>
+
+    <div class="pov-card c8" onclick="showView('p8', document.querySelector('.nav-btn:nth-child(9)'))">
+      <div class="pov-number">8</div>
+      <div class="pov-code" style="color:var(--p8)">Paradigm 08</div>
+      <div class="pov-title">扩散模型 / 生成式时序</div>
+      <div class="pov-tagline">以去噪扩散或 Flow Matching 为生成框架，LLM 提供条件指导，在合成数据、概率预测和异常注入中表现突出。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">TimeGrad</span><span class="pov-tag">CSDI</span><span class="pov-tag">Diffusion-TS</span><span class="pov-tag">LDT</span>
+      </div>
+    </div>
+
+    <div class="pov-card c9" onclick="showView('p9', document.querySelector('.nav-btn:nth-child(10)'))">
+      <div class="pov-number">9</div>
+      <div class="pov-code" style="color:var(--p9)">Paradigm 09</div>
+      <div class="pov-title">RAG 检索增强时序</div>
+      <div class="pov-tagline">从历史案例库或外部知识中检索相似片段，作为 LLM 预测的参考上下文，缓解长程遗忘与分布偏移。</div>
+      <div class="pov-papers">
+        <span class="pov-tag">RAFT-TS</span><span class="pov-tag">Retrieval-TS</span><span class="pov-tag">ForecastPFN</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footnote">
+    * 范式边界并非硬性分割，多篇论文同时跨越多个范式（如 TimeOmni 同属 P4+P6，TIME-MOE 同属 P1+P5）。<br>
+    * 范式分类参考：Jin et al. "Time-LLM" ICLR 2024；Liang et al. "UniTime" WWW 2024；以及 ICML 2024 Time Series Survey。
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P1 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p1" class="view c1">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">01</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 01 · Token 化自回归生成</div>
+      <div class="pd-title">将时序"翻译"成 LLM<br>可直接消费的语言</div>
+      <div class="pd-subtitle">核心问题：LLM 天生处理离散 Token，连续数值如何对接？解法：通过量化、Patch 分割或特殊嵌入，将时序转化为 Token 序列，然后用标准 Causal LM 预训练框架做自回归预测。这是最彻底的范式——时序被当作一种"语言"。</div>
+    </div>
+  </div>
+
+  <div class="mechanism-section">
+    <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">核心机制</div><div class="section-rule-line"></div></div>
+    <div class="mechanism-box">
+      <div style="color:rgba(245,242,235,0.5);font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px">PIPELINE</div>
+      <div class="mech-flow">
+        <div class="mech-step"><div class="step-label">RAW INPUT</div><div class="step-val">连续时序 x₁…xₜ</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">TOKENIZE</div><div class="step-val">量化/Patch/Lag</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">EMBED</div><div class="step-val">Token Embedding</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">CAUSAL-LM</div><div class="step-val">Transformer Decoder</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">OUTPUT</div><div class="step-val">Next-Token 分布</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">DECODE</div><div class="step-val">反量化 → 预测值</div></div>
+      </div>
+      <div class="mech-desc">训练目标与语言模型完全一致：最小化 Cross-Entropy（量化）或 NLL（连续参数化）。推理时多次采样生成概率预测集合（Ensemble of Trajectories）。</div>
+    </div>
+  </div>
+
+  <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">Token 化策略对比</div><div class="section-rule-line"></div></div>
+  <div class="key-components">
+    <div class="kc-item"><div class="kc-icon">🔢</div><div class="kc-name">均匀量化（Chronos）</div><div class="kc-desc">将缩放后的数值均匀分桶（如 4096 bins），映射到整数 Token ID，完全离散化，可直接使用文本词汇表。</div></div>
+    <div class="kc-item"><div class="kc-icon">🪟</div><div class="kc-name">Patch Token（PatchTST）</div><div class="kc-desc">将时序切分为固定长度窗口（Patch），每个 Patch 经线性层映射为一个连续向量 Token，保留局部结构。</div></div>
+    <div class="kc-item"><div class="kc-icon">⏳</div><div class="kc-name">Lag Feature（Lag-Llama）</div><div class="kc-desc">将多个历史滞后点拼接为协变量向量，捕捉季节性周期，是统计先验（ARIMA）向深度学习的桥梁。</div></div>
+    <div class="kc-item"><div class="kc-icon">📍</div><div class="kc-name">单步 Token（Timer）</div><div class="kc-desc">每个时间步直接作为一个 Token，最细粒度，信息无损，但序列长度受上下文窗口限制。</div></div>
+  </div>
+
+  <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">代表论文深析</div><div class="section-rule-line"></div></div>
+  <div class="paper-cards-grid">
+
+    <div class="pc c1">
+      <div class="pc-head">
+        <div class="pc-venue">Amazon Web Services · arXiv 2403.07815 · 2024</div>
+        <div class="pc-title">Chronos: Learning the Language of Time Series</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>将浮点数通过 Min-Max 归一化 + 均匀分桶量化为整数 Token（词汇表大小 4096），时序预测问题完全等价于语言模型的 Next-Token Prediction。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>骨干网络直接复用 T5（Encoder-Decoder），用 Cross-Entropy 损失端到端训练，无需任何时序专用模块。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div><strong>TSMix 数据增强</strong>：对历史窗口做随机裁剪、混合，显著增加训练样本多样性。</div></div>
+          <div class="pc-step"><div class="pc-step-n">4</div><div><strong>高斯过程合成数据</strong>：用多种核函数（SE/Matérn/周期核混合）合成大量虚拟时序填充训练集，缓解真实数据稀缺。</div></div>
+        </div>
+        <div class="pc-field">架构图解（简化）</div>
+        <div class="pc-code-block">
+<span class="comment"># Chronos 量化流程</span>
+x_scaled = (x - x.min()) / (x.max() - x.min())  <span class="comment"># 归一化</span>
+token_ids = (x_scaled * 4095).round().long()       <span class="comment"># 量化为整数</span>
+logits = t5_model(token_ids)                        <span class="comment"># T5 推理</span>
+samples = sample_trajectories(logits, n=20)         <span class="comment"># 采样20条轨迹</span>
+prediction = dequantize(samples)                    <span class="comment"># 反量化得到概率预测</span>
+        </div>
+        <div class="pc-field">实验结论</div>
+        <div class="pc-content">在 42 个零样本数据集上，Chronos-Large（710M）平均超越多数专用模型；合成数据贡献约 15% 性能增益；量化精度（bins 数量）对最终性能影响有限，4096 已足够。</div>
+        <div class="pc-insight">将时序完全"语言化"的激进方案——这意味着 NLP 工具链（Beam Search、采样策略、Prompt Engineering）可直接复用于时序预测。</div>
+      </div>
+    </div>
+
+    <div class="pc c1">
+      <div class="pc-head">
+        <div class="pc-venue">ICML 2024 · arXiv 2402.02368</div>
+        <div class="pc-title">Timer: Generative Pre-trained Transformers are Large Time Series Models</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>直接使用 <strong>GPT-style Decoder-only Transformer</strong>，无任何语言模态附加组件，验证纯结构迁移可行性。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>构建 <strong>UTSD（Unified Time Series Dataset）</strong>：聚合跨能源/交通/金融/气象领域 1B+ Token 预训练语料，统一采样频率表示。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>同一预训练模型通过添加不同解码头，统一处理<strong>预测、填补、异常检测</strong>三类任务。</div></div>
+          <div class="pc-step"><div class="pc-step-n">4</div><div><strong>Scaling Law 实验</strong>：系统消融模型尺寸（Small/Base/Large），验证时序领域参数量 → 性能的幂律规律。</div></div>
+        </div>
+        <div class="pc-field">Scaling Law 证据</div>
+        <div class="pc-content">实验显示 Timer-Large（200M）比 Timer-Small（5M）在 MSE 上降低约 18%，且曲线斜率与 GPT 系列语言模型相似，为时序大模型路线提供了理论依据。</div>
+        <div class="pc-insight">时序领域的"GPT 时刻"验证：大力出奇迹同样适用，架构不必另起炉灶，数据+规模是核心变量。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>与 NLP 工具链完全兼容，生态复用成本低</li>
+      <li>天然支持概率预测（采样多条轨迹）</li>
+      <li>Scaling Law 成立，增大数据/模型即可涨点</li>
+      <li>合成数据可大幅补充训练集</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>量化引入信息损失，高精度数值预测受影响</li>
+      <li>单步 Token 方案受上下文窗口限制严重</li>
+      <li>训练成本高，需大规模跨域数据集</li>
+      <li>对稀疏/不规则采样时序适配性差</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P2 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p2" class="view c2">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">02</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 02 · 冻结 LLM + 轻量适配</div>
+      <div class="pd-title">借力打力：锁住大模型，<br>仅训练"翻译层"</div>
+      <div class="pd-subtitle">核心洞察：预训练 LLM 的注意力权重已内化了对序列模式（节奏、趋势、周期）的有效归纳偏置，完全可以被时序任务复用——前提是找到合适的"模态对齐"方法。冻结策略将训练成本降低至 1–5%，同时保留语言知识。</div>
+    </div>
+  </div>
+
+  <div class="mechanism-section">
+    <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">核心机制</div><div class="section-rule-line"></div></div>
+    <div class="mechanism-box">
+      <div style="color:rgba(245,242,235,0.5);font-family:'DM Mono',monospace;font-size:11px;margin-bottom:12px">FROZEN LLM PIPELINE</div>
+      <div class="mech-flow">
+        <div class="mech-step"><div class="step-label">TIME SERIES</div><div class="step-val">Patch / 原始值</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">ADAPTER ✏️</div><div class="step-val">可训练对齐层</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">FROZEN LLM 🔒</div><div class="step-val">GPT-2 / LLaMA</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">HEAD ✏️</div><div class="step-val">可训练预测头</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">OUTPUT</div><div class="step-val">预测序列</div></div>
+      </div>
+      <div class="mech-desc">🔒 = 完全冻结，梯度不流过；✏️ = 参与训练。适配层可以是线性投影、交叉注意力（Reprogramming）、LoRA 低秩分解或 Prefix Tuning。</div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c2">
+      <div class="pc-head">
+        <div class="pc-venue">ICLR 2024 · arXiv 2310.01728</div>
+        <div class="pc-title">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div><strong>Patch Reprogramming</strong>：将时序分割为 Patch，然后通过一个可训练的<strong>多头交叉注意力模块</strong>，将每个 Patch 表征"重投影"到文本词嵌入空间（Key/Value 来自文本词汇表的可学习子集）。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div><strong>Prompt-as-Prefix</strong>：在序列输入前拼接自然语言前缀（包含数据集描述、统计摘要、任务说明），激活 LLM 对相关语义的注意力。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>LLaMA-7B / GPT-2 骨干<strong>完全冻结</strong>，仅训练 Reprogramming 层和线性输出头，可训练参数 &lt; 1%。</div></div>
+        </div>
+        <div class="pc-field">Reprogramming 模块细节</div>
+        <div class="pc-code-block">
+<span class="comment"># Patch Reprogramming（简化）</span>
+patch_emb = patch_linear(x_patch)          <span class="comment"># 线性投影</span>
+text_proto = learnable_text_vocab[top_k]   <span class="comment"># K 个可学文本原型</span>
+Q = patch_emb                               <span class="comment"># Query: 时序 patch</span>
+K, V = text_proto, text_proto              <span class="comment"># Key/Value: 文本空间</span>
+reprogrammed = cross_attention(Q, K, V)    <span class="comment"># 投影到语言空间</span>
+output = frozen_llm(prefix + reprogrammed) <span class="comment"># LLM 推理</span>
+        </div>
+        <div class="pc-field">为什么 Prefix 有效</div>
+        <div class="pc-content">自然语言前缀让 LLM 形成"任务上下文"，类似于 NLP 中的 Few-Shot Prompt。实验显示去掉 Prefix 后性能下降 3–8%，说明语义条件对时序预测有独立贡献。</div>
+        <div class="pc-insight">Reprogramming = 一个"语言翻译器"，让时序 Patch 说 LLM 能听懂的"方言"，同时保留原始信号的统计结构。</div>
+      </div>
+    </div>
+
+    <div class="pc c2">
+      <div class="pc-head">
+        <div class="pc-venue">NeurIPS 2023 · arXiv 2302.11939</div>
+        <div class="pc-title">One Fits All: Power General Time Series Analysis by Pretrained LM</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>完全冻结 <strong>GPT-2 所有 Transformer 层</strong>（包括 Self-Attention 和 FFN），仅训练 Input Embedding 和 Output Projection Head。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>同一套冻结权重在<strong>5类任务</strong>（长期预测、短期预测、填补、分类、异常检测）上切换，通过不同 Head 适配输出格式。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div><strong>反直觉发现</strong>：从头在时序上训练的 GPT-2 比冻结版效果更差，说明语言预训练注入了有价值的序列先验，不应被覆盖。</div></div>
+        </div>
+        <div class="pc-field">关键消融：冻结 vs 微调</div>
+        <div class="pc-content">论文对比了四种设置：(a) 完全随机初始化训练；(b) 预训练权重 + 完全微调；(c) 预训练权重 + 冻结 Attn / 训练 FFN；(d) 预训练权重 + 完全冻结（OFA）。结论：(d) 在多数任务上优于 (a)(b)(c)，验证"语言先验 > 时序专用微调"的假设。</div>
+        <div class="pc-insight">LLM 的注意力层学到的是"对任意序列有效的归纳偏置"，而非语言专用特征——这是冻结策略有效的根本原因。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>训练成本极低（可训练参数 &lt;5%）</li>
+      <li>天然避免灾难性遗忘</li>
+      <li>可插拔：Adapter 独立迭代，LLM 主体复用</li>
+      <li>适合资源受限的工程部署</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>LLM 容量浪费：大量参数锁死，表达上限受限</li>
+      <li>适配层设计复杂，超参数敏感</li>
+      <li>模态鸿沟未完全消除，极端非平稳序列效果欠佳</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P3 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p3" class="view c3">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">03</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 03 · In-Context Learning</div>
+      <div class="pd-title">零训练预测：<br>把历史数据直接喂给 LLM</div>
+      <div class="pd-subtitle">核心思路：将历史时序值序列化为数字字符串，拼入 Prompt，让 LLM 在推理阶段直接"续写"未来值，无需任何梯度更新。这是最轻量的范式，代价是受上下文窗口和数值精度制约。</div>
+    </div>
+  </div>
+
+  <div class="mechanism-section">
+    <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">核心机制</div><div class="section-rule-line"></div></div>
+    <div class="mechanism-box">
+      <div style="color:rgba(245,242,235,0.5);font-family:'DM Mono',monospace;font-size:11px;margin-bottom:16px">PROMPT TEMPLATE</div>
+      <div style="background:rgba(255,255,255,0.06);padding:16px 20px;border-radius:4px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.9;color:#e8e8e8;">
+        <span style="color:#aed6f1">System:</span> You are a time series forecasting assistant.<br>
+        <span style="color:#aed6f1">User:</span> The historical values are:<br>
+        <span style="color:#a8e6cf">1.2, 1.5, 1.8, 2.1, 1.9, 2.3, 2.6, 2.4, 2.8, 3.0</span><br>
+        Please predict the next <span style="color:#ffd166">5</span> values.<br>
+        <span style="color:#aed6f1">Assistant:</span> <span style="color:#ff9999">3.2, 3.1, 3.4, 3.6, 3.5</span>
+      </div>
+      <div class="mech-desc" style="margin-top:16px">关键变量：数值精度（小数位）、分隔符（逗号/空格/换行）、示例数量、是否包含统计描述（均值/方差）。这些格式选择对预测精度影响显著。</div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c3">
+      <div class="pc-head">
+        <div class="pc-venue">NeurIPS 2023 Workshop · Gruver et al. 2023</div>
+        <div class="pc-title">LLMTime: Large Language Models Are Zero-Shot Time Series Forecasters</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>系统研究将时序序列化为文本的<strong>最优格式</strong>：精度（小数位）、间隔符、缩放方式对 GPT-4/LLaMA 的预测精度影响最大。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>提出 <strong>Rescaling + Discretization</strong> 策略：先将序列归一化到 [0,10] 区间，再以固定精度序列化，最大化 LLM 数字 Token 的利用率。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>对 GPT-3.5 / GPT-4 / LLaMA-2 进行零样本评测，在多个短期预测数据集上优于部分专用模型。</div></div>
+        </div>
+        <div class="pc-field">格式敏感性分析</div>
+        <div class="pc-content">实验显示"1.23, 2.34, ..."格式优于"[1.23][2.34]"格式约 12%；精度 2 位小数最优（精度过高导致 Token 碎片化，过低损失信息）；加入统计描述 Prefix（"均值约 2.0，呈上升趋势"）进一步提升 7–10%。</div>
+        <div class="pc-insight">LLM 天生是"好的数字续写者"，但需要精心设计的数字表示格式来最大化 Token 效率，这与文本 ICL 的 Prompt 工程高度类似。</div>
+      </div>
+    </div>
+
+    <div class="pc c3">
+      <div class="pc-head">
+        <div class="pc-venue">AAAI 2024 · arXiv 2302.03268</div>
+        <div class="pc-title">GPT4TS: Are Transformers Effective for Time Series Forecasting?（GPT 变体路线）</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>对预训练 GPT-2 做极简适配（仅添加可训练的位置编码和线性头），在 8 个标准 Benchmark 上系统评测，揭示 ICL 与微调的性能边界。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>关键发现：<strong>Attention 层主导性能</strong>，FFN 层对时序贡献有限；将 FFN 替换为随机层后性能下降仅 3%。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>证明即使是"退化"的 GPT-2（移除多头注意力头数量至 1）在时序上仍然有效，提示时序预测不依赖语言模型中复杂的多头机制。</div></div>
+        </div>
+        <div class="pc-insight">Attention 是 LLM 给时序的真正礼物，FFN 的语言知识存储功能在时序任务中并非必需——这为更极致的冻结策略提供了理论支撑。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>零训练成本，即插即用</li>
+      <li>可利用 GPT-4 等商业 API</li>
+      <li>Prompt 可随时注入领域知识</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>长序列受上下文窗口严格限制</li>
+      <li>数值精度损失不可避免</li>
+      <li>推理成本随序列长度线性增长</li>
+      <li>对格式超参数极为敏感</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P4 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p4" class="view c4">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">04</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 04 · 语义增强 / 多模态融合</div>
+      <div class="pd-title">让 LLM 理解时序的<br>"意义"，而非只看数字</div>
+      <div class="pd-subtitle">时序数据背后有丰富的语义上下文：这条曲线代表什么传感器？当前趋势是上涨还是下跌？发生了什么事件？将这些语义信息与数值信号联合建模，是激活 LLM 世界知识的关键通道。</div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c4">
+      <div class="pc-head">
+        <div class="pc-venue">ICLR 2024 Workshop / arXiv 2024</div>
+        <div class="pc-title">Semantic-Enhanced Time-Series Forecasting via Large Language Models</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心机制</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div><strong>自动语义提取</strong>：从数值序列中计算统计量（均值、方差、斜率、周期主频），并用模板生成自然语言描述："该序列呈上升趋势，波动性中等，检测到约 24 小时周期。"</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>LLM（冻结）对文本描述编码得到<strong>语义向量</strong>，时序编码器对数值信号编码得到<strong>数值向量</strong>。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div><strong>Attention Gate 融合</strong>：以语义向量为注意力门控信号，对数值表征进行加权，过滤无关数值特征，强化语义相关特征。</div></div>
+        </div>
+        <div class="pc-insight">语义描述 = 免费的"元数据注入"。不需要真实的外部文本标注，从数值本身自动生成描述即可激活 LLM 的语言先验。</div>
+      </div>
+    </div>
+
+    <div class="pc c4">
+      <div class="pc-head">
+        <div class="pc-venue">arXiv 2024 · MLLM Benchmark</div>
+        <div class="pc-title">MMAD: A Comprehensive Benchmark for Multimodal LLMs in Industrial Anomaly Detection</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心贡献</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>构建覆盖 <strong>39 类工业产品</strong>、38,000 张图像的多模态异常检测 Benchmark，提供像素级标注和结构化 QA 对。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>定义三维能力评测框架：<strong>感知（是否有异常？）→ 定位（在哪里？）→ 推理（为什么？）</strong>。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>评测 15+ 主流 MLLM（GPT-4V、LLaVA、InstructBLIP 等），发现所有模型在"定位"和"推理"维度存在显著能力缺口。</div></div>
+        </div>
+        <div class="pc-field">能力缺口量化</div>
+        <div class="pc-content">最佳模型（GPT-4V）感知准确率 ~78%，但定位 IoU &lt; 0.35，推理准确率 &lt; 55%——说明当前 MLLM 对工业时序/图像信号的"看懂"与"真正理解"之间仍有巨大差距。</div>
+        <div class="pc-insight">Benchmark 即方向：定位和推理能力的缺口，正是下一代多模态时序 LLM 需要重点突破的方向。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>激活 LLM 世界知识，提升泛化能力</li>
+      <li>输出自然语言，天然可解释</li>
+      <li>可接入外部事件数据库（新闻、日历等）</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>语义描述生成质量影响最终性能</li>
+      <li>多模态对齐训练数据稀缺</li>
+      <li>推理延迟增加（需额外文本编码）</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P5 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p5" class="view c5">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">05</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 05 · 统一多任务基础模型</div>
+      <div class="pd-title">One Model, All Tasks:<br>时序基础模型的终极形态</div>
+      <div class="pd-subtitle">目标：单一预训练模型可零样本处理任意领域、任意变量数、任意频率的时序数据，并统一支持预测、填补、分类、异常检测等多种下游任务，无需任何数据集专用微调。</div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c5">
+      <div class="pc-head">
+        <div class="pc-venue">ICML 2024 · Salesforce AI Research · arXiv 2402.02592</div>
+        <div class="pc-title">Unified Training of Universal Time Series Forecasting Transformers (Moirai)</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div><strong>Any-Variate Attention</strong>：每条变量独立 Patch，变量间权重完全共享。这样模型对变量数量无假设，天然适应单变量/多变量场景。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div><strong>混合分布输出头</strong>：同时建模连续（正态/Student-T）和离散（负二项分布）类型，统一处理实值序列和计数序列（订单量、访客数等）。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div><strong>LOTSA 数据集</strong>：大规模跨域预训练语料，覆盖能源、气象、零售、金融等 8 个领域，总计 27B Token。</div></div>
+          <div class="pc-step"><div class="pc-step-n">4</div><div><strong>Patch 大小多样性</strong>：训练时随机采样不同 Patch 大小，使模型对不同粒度的输入具备鲁棒性。</div></div>
+        </div>
+        <div class="pc-insight">Any-variate = 打破了"固定变量数"的壁垒，这是从专用模型走向通用基础模型最关键的架构决策。</div>
+      </div>
+    </div>
+
+    <div class="pc c5">
+      <div class="pc-head">
+        <div class="pc-venue">arXiv 2024 · MOMENT: MIT + CMU</div>
+        <div class="pc-title">MOMENT: A Family of Open Time-Series Foundation Models</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>基于 T5 Encoder 架构，以 <strong>Masked Patch Modeling（MPM）</strong> 作为预训练目标——随机遮盖 30–40% 的 Patch，重建被遮盖片段，类似 BERT 的 MLM。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>构建 <strong>TIMESERIES-PILE</strong>：聚合 13 个公开时序数据集的统一预训练集，覆盖 7 个领域。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>提供 Small / Base / Large 三个版本（参数量 40M–385M），所有模型权重<strong>完全开源</strong>，是目前最易复用的时序基础模型之一。</div></div>
+        </div>
+        <div class="pc-field">MPM vs 自回归对比</div>
+        <div class="pc-content">MPM（双向注意力）在填补、分类任务上优于自回归训练；自回归（Causal）在长期预测上更优。MOMENT 选择 MPM 是面向多任务的有意取舍。</div>
+        <div class="pc-insight">开源是时序基础模型生态建设的核心，MOMENT 的完全开放策略正在吸引大量下游研究复用其表征层。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>真正零样本，无需数据集专用训练</li>
+      <li>统一处理多任务，维护成本低</li>
+      <li>大规模预训练带来强跨域泛化</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>预训练成本极高（需 27B+ Token 数据）</li>
+      <li>多任务间可能存在负迁移</li>
+      <li>垂直领域长尾场景精度不如专用模型</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P6 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p6" class="view c6">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">06</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 06 · 推理链 / RL 后训练</div>
+      <div class="pd-title">让 LLM 对时序<br>真正"思考"，而非记忆</div>
+      <div class="pd-subtitle">从"模式拟合"到"因果推理"：借助链式思维（CoT）、Scratchpad 推理或强化学习后训练（GRPO/PPO），激励 LLM 对时序异常、趋势转折、跨变量因果关系进行多步逻辑推理，而非仅仅外推数值模式。</div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c6">
+      <div class="pc-head">
+        <div class="pc-venue">arXiv 2025 · TimeOmni Team</div>
+        <div class="pc-title">TimeOmni-1: Incentivizing Complex Reasoning with Time Series in Large Language Models</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div><strong>TimeReasonBench</strong>：构建专注于时序推理的 QA 数据集，问题涉及根因分析（"为什么在 t=142 出现突变？"）、跨变量推断、多步预测解释。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div><strong>GRPO 强化学习后训练</strong>：以推理链质量（中间步骤正确性 + 最终答案准确性）作为奖励信号，类比 DeepSeek-R1 在 NLP 中的路线。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>多模态架构：专用时序编码器（Patch Transformer）+ LLM 骨干 + 推理解码头联合训练，支持时序 → 语言的跨模态推理链输出。</div></div>
+        </div>
+        <div class="pc-field">CoT 示例</div>
+        <div class="pc-code-block">
+<span class="comment">Q: 为什么传感器 A 在 t=200 后出现异常？</span>
+<span style="color:#aed6f1">Step 1:</span> 分析 t=150-200 的上升趋势...斜率约 0.08/步
+<span style="color:#aed6f1">Step 2:</span> 检测到 t=198 的突变点，幅度超过 3σ...
+<span style="color:#aed6f1">Step 3:</span> 对比传感器 B（相关系数 0.82），B 在 t=196 先出现...
+<span style="color:#aed6f1">Conclusion:</span> 传感器 B 的异常通过耦合效应传导至 A...
+        </div>
+        <div class="pc-insight">这是时序领域的"o1 时刻"——让 LLM 不只给出答案，而是展示推理过程，为工业诊断、科学发现提供可信证据链。</div>
+      </div>
+    </div>
+
+    <div class="pc c6">
+      <div class="pc-head">
+        <div class="pc-venue">AAAI 2024 · Chain-of-Thought for Time Series</div>
+        <div class="pc-title">Chain-of-Thought Prompting for Time Series Anomaly Detection（CoT-AD）</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>设计专用时序 CoT 模板：<strong>统计分析 → 局部模式识别 → 全局上下文对比 → 异常判断</strong>四步推理链，引导 LLM 系统化分析时序段。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>通过 <strong>Few-Shot CoT 演示样例</strong>（而非 RL）注入推理策略，成本极低，适合 GPT-4 API 调用场景。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>在 5 个真实异常检测数据集（KPI、SMAP、MSL）上，CoT 比直接问答 F1 提升 12–18%。</div></div>
+        </div>
+        <div class="pc-insight">CoT 对时序异常检测效果显著，且无需训练——对于工程团队而言，这是快速提升可解释性的最低成本方案。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>输出推理过程，可解释性大幅提升</li>
+      <li>RL 后训练可大幅提升复杂任务精度</li>
+      <li>适合根因分析、科学发现等高价值场景</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>RL 后训练成本高，奖励函数设计复杂</li>
+      <li>推理链输出延迟高（Token 数多 3–10×）</li>
+      <li>CoT 质量依赖 LLM 能力下限</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P7 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p7" class="view c7">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">07</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 07 · LLM as Agent / 工具调用</div>
+      <div class="pd-title">LLM 做指挥官：<br>感知事件、调度工具、迭代反思</div>
+      <div class="pd-subtitle">LLM 不再只是预测模型，而是具备<strong>感知—规划—行动—反思</strong>完整闭环的智能体：可主动检索新闻事件、调用统计工具、执行代码、通过评估 Agent 对结果进行反思修正，实现端到端的自主时序分析。区别于 P3（ICL 静态 Prompt）和 P6（推理链），P7 的核心在于<strong>主动工具调用与迭代反馈循环</strong>。</div>
+    </div>
+  </div>
+
+  <div class="mechanism-section">
+    <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">双 Agent 协作工作流（NeurIPS 2024 范式）</div><div class="section-rule-line"></div></div>
+    <div class="mechanism-box">
+      <div class="mech-flow" style="flex-wrap:wrap;gap:8px">
+        <div class="mech-step"><div class="step-label">PERCEPTION</div><div class="step-val">原始时序 + 元数据</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">REASONING AGENT</div><div class="step-val">检索新闻/外部事件<br>过滤无关信息</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">PREDICTION LLM</div><div class="step-val">事件增强预测</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">EVALUATION AGENT</div><div class="step-val">对比预测 vs 真值<br>更新过滤逻辑</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">ITERATION ×N</div><div class="step-val">反思迭代直至收敛</div></div>
+      </div>
+      <div class="mech-desc" style="margin-top:12px">关键创新：引入独立的<strong>评估 Agent</strong>对"推理 Agent 的新闻筛选逻辑"进行元层面的反思与修正，形成自我改进的闭环，而非单轮静态 Prompt。</div>
+    </div>
+  </div>
+
+  <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">范式边界澄清</div><div class="section-rule-line"></div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;">
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:16px;font-size:12px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px">P3 · ICL</div>
+      <div style="color:#555;line-height:1.6">静态 Prompt，单次推理，无工具调用，无反馈循环</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:16px;font-size:12px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px">P6 · CoT/RL</div>
+      <div style="color:#555;line-height:1.6">LLM 内部推理链，不调用外部工具，不主动感知环境</div>
+    </div>
+    <div style="background:var(--paper3);border:1px solid rgba(58,106,26,0.3);border-radius:3px;padding:16px;font-size:12px;border-left:3px solid var(--p7)">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--p7);margin-bottom:6px">P7 · Agent ← 本范式</div>
+      <div style="color:#555;line-height:1.6">主动调用工具/检索/执行代码，多 Agent 协作，迭代反思修正</div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c7">
+      <div class="pc-head">
+        <div class="pc-venue">NeurIPS 2024 Main Track · arXiv 2409.17515</div>
+        <div class="pc-title">From News to Forecast: Integrating Event Analysis in LLM-Based Time Series Forecasting with Reflection</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">论文背景 &amp; 动机</div>
+        <div class="pc-content">传统时序模型仅处理数值信号，无法响应突发社会事件（自然灾害、政策变动、市场恐慌）对序列走势的影响。该工作首次在 NeurIPS 主会系统提出以<strong>多 Agent 架构</strong>将非结构化新闻事件融入时序预测。</div>
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div><strong>Reasoning Agent（推理智能体）</strong>：根据时间窗口、地区、任务关键词，从新闻语料库中检索候选事件；通过多轮 Prompt 迭代过滤无关新闻，只保留与时序波动因果相关的事件。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div><strong>Evaluation Agent（评估智能体）</strong>：将推理 Agent 筛选的新闻配合预测结果，与真实值对比，计算误差；将误差反馈给推理 Agent，<strong>更新其新闻筛选逻辑</strong>——这是"Agent 反思（Reflection）"的核心。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>将最终筛选好的事件文本与数值时序拼接为 Prompt，<strong>微调 LLaMA-2（7B）</strong>做端到端数字序列预测，充分利用 LLM 的数值续写与语义理解能力。</div></div>
+          <div class="pc-step"><div class="pc-step-n">4</div><div>实验验证：迭代 2 次评估反馈后性能趋于收敛，在电力消耗、汇率、交通量、比特币价格 4 个数据集上均显著优于纯数值 Baseline（包括 PatchTST、iTransformer、GPT4TS）。</div></div>
+        </div>
+        <div class="pc-field">Reflection 循环示意</div>
+        <div class="pc-code-block">
+<span class="comment"># 伪代码：评估 Agent 反思循环</span>
+news_logic = initial_filter_logic
+for iteration in range(max_iter):
+    news_set = reasoning_agent.filter(news_pool, news_logic)
+    prediction = llm_predict(ts_history + news_set)
+    error = evaluate_agent.compare(prediction, ground_truth)
+    news_logic = evaluate_agent.reflect(error, news_logic)
+    <span class="comment"># 评估 Agent 更新"什么类型的新闻最有预测价值"</span>
+    if converged(error): break
+        </div>
+        <div class="pc-insight">首篇在 NeurIPS 主会上将"Agent Reflection"机制引入时序预测的工作——评估 Agent 对推理过程本身做元层面监督，是当前时序 Agent 范式中最成熟的迭代优化方案。</div>
+      </div>
+    </div>
+
+    <div class="pc c7">
+      <div class="pc-head">
+        <div class="pc-venue">arXiv 2508.04231 · ACM KDD 2025 投稿</div>
+        <div class="pc-title">DCATS: A Data-Centric LLM Agent for Time Series Forecasting (Empowering Time Series Forecasting with LLM-Agents)</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">论文背景 &amp; 动机</div>
+        <div class="pc-content">现有 AutoML 方法聚焦于模型架构搜索，而忽视了数据质量对时序预测的决定性影响。该工作提出<strong>以数据为中心（Data-Centric）</strong>的 LLM Agent 方案：Agent 不再选择模型，而是自主优化训练数据本身。</div>
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div><strong>提案生成 Agent</strong>：读取时序元数据（采样频率、领域标签、已知噪声特征），生成数据子集筛选方案（"去除节假日异常点"、"仅保留工作日数据"等），以 JSON 结构化描述。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div><strong>提案精炼 Agent</strong>：对每个数据方案进行实验验证（用轻量基础模型快速评估），将验证误差反馈给提案 Agent，<strong>迭代精炼数据处理策略</strong>，类似 AutoML 的超参搜索但作用于数据层。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>Pipeline 中集成了<strong>基于 Matrix Profile 的异常数据自动剔除</strong>（去除最异常 10% 的片段），确保输入基础模型的数据质量。</div></div>
+          <div class="pc-step"><div class="pc-step-n">4</div><div>在大规模交通量预测数据集上，DCATS 在 4 个预测模型（包括 Transformer 和 MLP 类）上平均降低 MAE 约 <strong>6%</strong>，且无需修改任何模型结构。</div></div>
+        </div>
+        <div class="pc-field">与 News-to-Forecast 的范式对比</div>
+        <div class="pc-content">News-to-Forecast 的 Agent 作用于<strong>外部知识注入</strong>（新闻事件筛选），DCATS 的 Agent 作用于<strong>训练数据优化</strong>（子集选择与清洗）——两者共同揭示了 Agent 在时序流水线中的不同着力点：感知层 vs 数据层。</div>
+        <div class="pc-insight">数据中心 AI（Data-Centric AI）与 LLM Agent 的结合：让 Agent 成为"数据工程师"而非"模型工程师"，在轻量模型时代可能比架构搜索更有性价比。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">P7 范式的三个子类型</div><div class="section-rule-line"></div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;">
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:18px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--p7);margin-bottom:8px">TYPE A · 外部知识 Agent</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">事件感知型</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">主动检索新闻/公告/日历等外部事件，过滤并注入预测上下文。代表：News-to-Forecast (NeurIPS 2024)</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:18px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--p7);margin-bottom:8px">TYPE B · 数据工程 Agent</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">数据优化型</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">自主设计数据清洗/筛选/增强方案，迭代优化训练集质量。代表：DCATS (2025)</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:18px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--p7);margin-bottom:8px">TYPE C · 分析流水线 Agent</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">工具调用型</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">调用 Python 执行器、STL/ADF 等统计工具，自动生成分析报告。代表：MLZero (2025) / DeepAnalyze (2025)</div>
+    </div>
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>可主动感知外部事件，突破纯数值建模的信息边界</li>
+      <li>迭代反思机制可持续自我优化，无需人工干预</li>
+      <li>工具调用保证关键步骤的数学精确性</li>
+      <li>多 Agent 分工使系统高度模块化、可扩展</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>多轮 Agent 调用延迟高，实时场景不友好</li>
+      <li>新闻检索质量强依赖外部数据源和检索策略</li>
+      <li>Agent 规划错误会级联传播，需稳健的错误恢复机制</li>
+      <li>训练数据需包含 Agent 交互轨迹，构建成本高</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P8 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p8" class="view c8">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">08</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 08 · 扩散模型 / 生成式时序</div>
+      <div class="pd-title">以"去噪"的方式<br>生成时序的未来</div>
+      <div class="pd-subtitle">扩散模型（DDPM/Score Matching）将预测/填补问题统一为条件生成问题：从高斯噪声出发，在历史序列的条件引导下逐步去噪，生成符合真实分布的未来轨迹。LLM 可作为条件编码器或语义引导信号介入此框架。</div>
+    </div>
+  </div>
+
+  <div class="mechanism-section">
+    <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">扩散预测机制</div><div class="section-rule-line"></div></div>
+    <div class="mechanism-box">
+      <div class="mech-flow">
+        <div class="mech-step"><div class="step-label">CONDITION</div><div class="step-val">历史序列 x₁…xₜ</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">NOISE INIT</div><div class="step-val">xₜ₊₁:ₜ₊ₕ ~ N(0,I)</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">DENOISING ×T</div><div class="step-val">条件去噪网络</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">SAMPLE</div><div class="step-val">预测轨迹集合</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c8">
+      <div class="pc-head">
+        <div class="pc-venue">ICLR 2021 · NeurIPS 2021 · DeepMind / Amazon</div>
+        <div class="pc-title">TimeGrad & CSDI: Denoising Diffusion Models for Time Series Imputation and Forecasting</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">TimeGrad 核心机制</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>将时序预测重构为<strong>条件分数匹配（Score Matching）</strong>问题：训练神经网络估计 ∇ log p(xₜ|x&lt;ₜ)，推理时用 Langevin 采样生成预测分布。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>以 RNN 编码历史序列作为<strong>条件上下文</strong>注入去噪网络，每步去噪时均可访问历史信息。</div></div>
+        </div>
+        <div class="pc-field">CSDI 核心机制</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>将缺失值填补 和 概率预测统一为<strong>条件扩散</strong>：观测值条件 → 去噪生成缺失值，无需区分填补/预测任务。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>使用<strong>2D Attention</strong>（时间维度 × 变量维度），同时捕捉时间相关性和跨变量相关性。</div></div>
+        </div>
+        <div class="pc-insight">扩散模型天然给出概率预测集合，比确定性预测更能量化不确定性，在金融风险、能源调度等高风险场景中价值突出。</div>
+      </div>
+    </div>
+
+    <div class="pc c8">
+      <div class="pc-head">
+        <div class="pc-venue">ICML 2024 · arXiv 2406.xxxxx</div>
+        <div class="pc-title">Diffusion-TS: Interpretable Diffusion for General Time Series Generation</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>扩散去噪网络采用<strong>Transformer + Fourier 解耦</strong>架构：在去噪过程中显式分离趋势项（低频）和季节项（高频），使生成过程可解释。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div><strong>LLM 文本条件</strong>：通过 Cross-Attention 将文本描述（"预测下一季度销量，预期有节假日效应"）注入去噪过程，实现语义控制生成。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>统一支持<strong>无条件生成、预测、填补</strong>三种模式，通过 Mask 控制条件类型。</div></div>
+        </div>
+        <div class="pc-insight">将 LLM 的语义理解引入扩散生成过程，是实现"按需生成时序"（数据增强、仿真）的重要一步。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>概率预测分布质量高</li>
+      <li>天然处理缺失值填补</li>
+      <li>语义条件引导可生成"反事实"时序</li>
+      <li>生成数据可用于数据增强</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>采样步数多（50–1000 步），推理极慢</li>
+      <li>训练不稳定，需精细调节噪声调度</li>
+      <li>点预测精度不如判别模型</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- P9 -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-p9" class="view c9">
+  <button class="back-btn" onclick="showView('overview', document.querySelector('.nav-btn:first-child'))">返回总览</button>
+  <div class="pd-header">
+    <div class="pd-num">09</div>
+    <div class="pd-meta">
+      <div class="pd-code">Paradigm 09 · RAG 检索增强时序</div>
+      <div class="pd-title">检索相似历史，<br>为预测提供"参照系"</div>
+      <div class="pd-subtitle">当前序列的未来走势，往往与历史上相似片段的后续演化高度相关。RAG（Retrieval-Augmented Generation）从大规模历史数据库中检索最相似的案例，将其作为 LLM 预测的额外上下文，缓解分布偏移和长程遗忘问题。</div>
+    </div>
+  </div>
+
+  <div class="mechanism-section">
+    <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">RAG 时序预测流程</div><div class="section-rule-line"></div></div>
+    <div class="mechanism-box">
+      <div class="mech-flow">
+        <div class="mech-step"><div class="step-label">QUERY</div><div class="step-val">当前序列片段</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">ENCODE</div><div class="step-val">时序嵌入向量</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">RETRIEVE</div><div class="step-val">向量数据库 Top-K</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">AUGMENT</div><div class="step-val">历史案例 + 后续</div></div>
+        <div class="mech-arrow">→</div>
+        <div class="mech-step"><div class="step-label">LLM GEN</div><div class="step-val">参照案例生成预测</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="paper-cards-grid">
+
+    <div class="pc c9">
+      <div class="pc-head">
+        <div class="pc-venue">NeurIPS 2023 · arXiv 2311.xxxxx · ForecastPFN</div>
+        <div class="pc-title">ForecastPFN: Synthetically-trained Zero-Shot Forecasting</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>受先验拟合网络（Prior-Fitted Networks, PFN）启发：在<strong>合成时序数据集</strong>上元学习一个"先验分布"，使模型在推理时能从极少量观测中做贝叶斯预测。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div>本质上是<strong>隐式 RAG</strong>：模型在训练时"记忆"了大量合成时序的分布特性，推理时将输入序列与这些隐式记忆进行对比，输出最可能的延续。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>在 42 个真实数据集上零样本 CRPS 优于 N-BEATS 等专用模型，且推理时间 &lt; 10ms。</div></div>
+        </div>
+        <div class="pc-insight">ForecastPFN 将 RAG 的"检索"步骤隐式编码进模型权重——合成数据即"知识库"，推理即"检索+生成"的融合。</div>
+      </div>
+    </div>
+
+    <div class="pc c9">
+      <div class="pc-head">
+        <div class="pc-venue">AAAI 2025 · Retrieval-Augmented Time Series</div>
+        <div class="pc-title">RATS: Retrieval-Augmented Time Series Forecasting with LLMs</div>
+      </div>
+      <div class="pc-body">
+        <div class="pc-field">核心创新</div>
+        <div class="pc-steps">
+          <div class="pc-step"><div class="pc-step-n">1</div><div>建立<strong>双层检索库</strong>：(a) 数值时序库——存储历史片段的嵌入向量；(b) 事件文本库——存储对应时间段的新闻、公告等文本事件。</div></div>
+          <div class="pc-step"><div class="pc-step-n">2</div><div><strong>相似性检索</strong>：用 DTW（动态时间规整）+余弦相似度混合度量，检索 Top-K 历史片段及其后续演化；同时检索同期相关新闻事件。</div></div>
+          <div class="pc-step"><div class="pc-step-n">3</div><div>将检索到的历史案例（数值 + 文本）拼入 LLM Prompt，LLM 参照这些"案例"生成预测，并输出参考依据。</div></div>
+        </div>
+        <div class="pc-field">典型案例</div>
+        <div class="pc-content">预测某股票走势时，系统检索到"2020年3月类似的快速下跌片段"及对应的"新冠疫情初期市场恐慌报道"，LLM 在参考这些上下文后给出更保守的反弹预测。</div>
+        <div class="pc-insight">RAG 让时序预测获得"历史记忆"——相似历史片段的后续演化是比统计先验更具体、更可解释的参照依据。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="proscons">
+    <div class="pros"><h4>✚ 优势</h4><ul>
+      <li>检索库可动态更新，无需重训模型</li>
+      <li>可解释性强：检索案例即预测依据</li>
+      <li>缓解分布偏移（检索当前分布的相似样本）</li>
+      <li>可结合外部事件文本知识</li>
+    </ul></div>
+    <div class="cons"><h4>✖ 局限</h4><ul>
+      <li>检索质量强依赖时序嵌入方法</li>
+      <li>检索库构建成本高，冷启动困难</li>
+      <li>罕见事件（黑天鹅）无可参照历史案例</li>
+      <li>上下文长度受 LLM 窗口限制</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ -->
+<!-- MATRIX -->
+<!-- ════════════════════════════════════════════════ -->
+<div id="view-matrix" class="view">
+  <div class="section-rule"><div class="section-rule-line"></div><div class="section-rule-label">九大范式全局对比矩阵</div><div class="section-rule-line"></div></div>
+  <div class="comp-table-wrap">
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>范式</th>
+          <th>LLM 参与方式</th>
+          <th>训练成本</th>
+          <th>零样本能力</th>
+          <th>概率输出</th>
+          <th>可解释性</th>
+          <th>多任务</th>
+          <th>适用场景</th>
+          <th>代表模型</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="hi">
+          <td><strong>P1 Token化生成</strong></td>
+          <td>全量训练/从头</td>
+          <td>🔴 极高</td>
+          <td class="yes">✓✓</td>
+          <td class="yes">✓✓</td>
+          <td class="no">弱</td>
+          <td class="partial">部分</td>
+          <td>通用预测、概率预测</td>
+          <td><span class="ct-tag">Chronos</span><span class="ct-tag">Timer</span><span class="ct-tag">Lag-Llama</span></td>
+        </tr>
+        <tr>
+          <td><strong>P2 冻结+适配</strong></td>
+          <td>冻结骨干+轻量头</td>
+          <td>🟡 低</td>
+          <td class="partial">△</td>
+          <td class="no">—</td>
+          <td class="partial">中</td>
+          <td class="yes">✓</td>
+          <td>资源受限、快速部署</td>
+          <td><span class="ct-tag">One Fits All</span><span class="ct-tag">Time-LLM</span></td>
+        </tr>
+        <tr class="hi">
+          <td><strong>P3 In-Context</strong></td>
+          <td>纯推理，零训练</td>
+          <td>🟢 极低</td>
+          <td class="yes">✓✓</td>
+          <td class="no">—</td>
+          <td class="partial">中</td>
+          <td class="no">—</td>
+          <td>快速验证、短序列</td>
+          <td><span class="ct-tag">LLMTime</span><span class="ct-tag">GPT4TS</span></td>
+        </tr>
+        <tr>
+          <td><strong>P4 语义/多模态</strong></td>
+          <td>跨模态融合</td>
+          <td>🟡 中</td>
+          <td class="partial">△</td>
+          <td class="no">—</td>
+          <td class="yes">✓✓</td>
+          <td class="yes">✓</td>
+          <td>工业AD、QA、可解释预测</td>
+          <td><span class="ct-tag">ITFormer</span><span class="ct-tag">MMAD</span><span class="ct-tag">Semantic-TS</span></td>
+        </tr>
+        <tr class="hi">
+          <td><strong>P5 统一基础模型</strong></td>
+          <td>专用Transformer+大数据</td>
+          <td>🔴 极高</td>
+          <td class="yes">✓✓</td>
+          <td class="yes">✓</td>
+          <td class="no">弱</td>
+          <td class="yes">✓✓</td>
+          <td>通用基础模型、零样本</td>
+          <td><span class="ct-tag">Moirai</span><span class="ct-tag">MOMENT</span><span class="ct-tag">TIME-MOE</span></td>
+        </tr>
+        <tr>
+          <td><strong>P6 推理链/RL</strong></td>
+          <td>CoT+RL后训练</td>
+          <td>🔴 高</td>
+          <td class="partial">△</td>
+          <td class="no">—</td>
+          <td class="yes">✓✓</td>
+          <td class="partial">部分</td>
+          <td>根因分析、科学发现</td>
+          <td><span class="ct-tag">TimeOmni-1</span><span class="ct-tag">CoT-AD</span></td>
+        </tr>
+        <tr class="hi">
+          <td><strong>P7 Agent/工具调用</strong></td>
+          <td>规划+工具调度</td>
+          <td>🟢 低</td>
+          <td class="yes">✓</td>
+          <td class="no">—</td>
+          <td class="yes">✓✓</td>
+          <td class="yes">✓✓</td>
+          <td>复杂分析流程、报告生成</td>
+          <td><span class="ct-tag">News-to-Forecast</span><span class="ct-tag">DCATS</span><span class="ct-tag">MLZero</span></td>
+        </tr>
+        <tr>
+          <td><strong>P8 扩散生成</strong></td>
+          <td>条件编码器/引导</td>
+          <td>🟡 中高</td>
+          <td class="partial">△</td>
+          <td class="yes">✓✓</td>
+          <td class="partial">中</td>
+          <td class="partial">部分</td>
+          <td>概率预测、数据增强</td>
+          <td><span class="ct-tag">CSDI</span><span class="ct-tag">Diffusion-TS</span><span class="ct-tag">TimeGrad</span></td>
+        </tr>
+        <tr class="hi">
+          <td><strong>P9 RAG增强</strong></td>
+          <td>检索上下文注入</td>
+          <td>🟢 低</td>
+          <td class="yes">✓</td>
+          <td class="no">—</td>
+          <td class="yes">✓</td>
+          <td class="partial">部分</td>
+          <td>分布偏移场景、少样本</td>
+          <td><span class="ct-tag">RATS</span><span class="ct-tag">ForecastPFN</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-rule" style="margin-top:40px"><div class="section-rule-line"></div><div class="section-rule-label">工程选型指南</div><div class="section-rule-line"></div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:40px">
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:20px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">SCENARIO 01</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:8px">零样本快速部署</div>
+      <div style="font-size:13px;color:#555;line-height:1.65">→ <strong>P5</strong>（Moirai/MOMENT）开箱即用，或 <strong>P1</strong>（Chronos）。无需任何数据集专用训练，适合新领域冷启动。</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:20px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">SCENARIO 02</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:8px">资源受限、多任务</div>
+      <div style="font-size:13px;color:#555;line-height:1.65">→ <strong>P2</strong>（One Fits All）冻结 GPT-2，可训练参数 &lt;1%，5 类任务单模型覆盖，工程维护成本最低。</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:20px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">SCENARIO 03</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:8px">需要可解释根因分析</div>
+      <div style="font-size:13px;color:#555;line-height:1.65">→ <strong>P6</strong>（CoT/TimeOmni）或 <strong>P7</strong>（Agent工具链）。前者输出推理链，后者调用专业算子，均可溯源解释。</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:20px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">SCENARIO 04</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:8px">高质量概率预测</div>
+      <div style="font-size:13px;color:#555;line-height:1.65">→ <strong>P8</strong>（Diffusion-TS/CSDI）概率分布质量最优；或 <strong>P1</strong>（Chronos）采样多轨迹方案。</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:20px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">SCENARIO 05</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:8px">分布偏移/少样本适应</div>
+      <div style="font-size:13px;color:#555;line-height:1.65">→ <strong>P9</strong>（RAG）检索当前分布的历史相似案例；或 <strong>P3</strong>（ICL）无需重训即可快速适应新分布。</div>
+    </div>
+    <div style="background:var(--paper2);border:1px solid var(--rule);border-radius:3px;padding:20px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">SCENARIO 06</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:8px">追求极致 SOTA 精度</div>
+      <div style="font-size:13px;color:#555;line-height:1.65">→ <strong>P5</strong>（TIME-MOE，2.4B MoE）或 <strong>P1</strong>（Timer-Large），规模驱动，Scaling Law 护航。</div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    训练成本：🔴 &gt;100 GPU-days · 🟡 1–100 GPU-days · 🟢 &lt;1 GPU-day（API调用）<br>
+    零样本能力：✓✓ 强 · △ 中（需少量标注）· — 弱/不适用<br>
+    数据来源：论文原文 + Jin et al. ICML 2024 Survey "Large Models for Time Series and Spatio-Temporal Data"
+  </div>
+</div>
+
+</main>
+
+<script>
+const allViews = ['overview','p1','p2','p3','p4','p5','p6','p7','p8','p9','matrix'];
+
+function showView(id, btn) {
+  allViews.forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById('view-' + id);
+  if (target) {
+    target.classList.add('active');
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  if (btn) btn.classList.add('active');
+}
+
+// Card click navigation
+document.querySelectorAll('.pov-card').forEach((card, i) => {
+  card.addEventListener('click', () => {
+    const pids = ['p1','p2','p3','p4','p5','p6','p7','p8','p9'];
+    const navBtns = document.querySelectorAll('.nav-btn');
+    const targetBtn = navBtns[i + 1];
+    showView(pids[i], targetBtn);
+  });
+});
+</script>
+</body>
+</html>
