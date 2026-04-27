@@ -25,16 +25,16 @@
 
 ## 三、查（查找/获取）
 
-|操作|语法|示例|说明|
-|---|---|---|---|
-|**查找字符串**​|`find(str, pos=0)`|`pos = str.find("abc");`|返回首次出现位置，未找到返回`npos`|
-|**查找字符**​|`find(ch, pos=0)`|`pos = str.find('a');`|查找字符首次出现|
-|**反向查找**​|`rfind(str, pos=npos)`|`pos = str.rfind("abc");`|从后向前查找|
-|查找任意字符|`find_first_of(chars)`|`pos = str.find_first_of("aeiou");`|查找集合中任意字符|
-|查找非字符|`find_first_not_of(chars)`|`pos = str.find_first_not_of("123");`|查找非集合中字符|
-|**获取子串**​|`substr(pos=0, n=npos)`|`sub = str.substr(3, 5);`|获取子字符串|
-|**获取字符**​|`at(pos)`|`ch = str.at(3);`|安全访问，会检查边界|
-|下标访问|`operator[]`|`ch = str[3];`|快速访问，不检查边界|
+| 操作         | 语法                         | 示例                                                      | 说明                   |
+| ---------- | -------------------------- | ------------------------------------------------------- | -------------------- |
+| **查找字符串**​ | `find(str, pos=0)`         | `if (t.find(s) != std::string::npos) return true; // r` | 返回首次出现位置，未找到返回`npos` |
+| **查找字符**​  | `find(ch, pos=0)`          | `pos = str.find('a');`                                  | 查找字符首次出现             |
+| **反向查找**​  | `rfind(str, pos=npos)`     | `pos = str.rfind("abc");`                               | 从后向前查找               |
+| 查找任意字符     | `find_first_of(chars)`     | `pos = str.find_first_of("aeiou");`                     | 查找集合中任意字符            |
+| 查找非字符      | `find_first_not_of(chars)` | `pos = str.find_first_not_of("123");`                   | 查找非集合中字符             |
+| **获取子串**​  | `substr(pos=0, n=npos)`    | `sub = str.substr(3, 5);`                               | 获取子字符串               |
+| **获取字符**​  | `at(pos)`                  | `ch = str.at(3);`                                       | 安全访问，会检查边界           |
+| 下标访问       | `operator[]`               | `ch = str[3];`                                          | 快速访问，不检查边界           |
 
 ## 四、改（修改/替换）
 
