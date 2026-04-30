@@ -28,7 +28,7 @@ Curator 的职责是把原始脏数据变成干净且有结构性描述的数据
 
 第一步是**质量诊断与预处理**。Curator 先计算一个质量向量 Q，包含基础统计量（均值、方差、最小最大值、趋势斜率）、缺失值信息 M、异常值信息 O，以及 LLM 推荐的处理策略组合 π。然后依据策略执行变换，将原始数据 D 转换为干净数据 D̃。
 
-异常值检测支持三种方法：滚动 IQR（xt<Q1−α⋅IQRtx_t < Q_1 - \alpha \cdot \text{IQR}_t xt​<Q1​−α⋅IQRt​ 或 xt>Q3+α⋅IQRtx_t > Q_3 + \alpha \cdot \text{IQR}_t xt​>Q3​+α⋅IQRt​）、滚动 Z-Score（zt=∣xt−μt∣/σt>αz_t = |x_t - \mu_t|/\sigma_t > \alpha zt​=∣xt​−μt​∣/σt​>α）、百分位规则。检测后根据 LLM 的建议选择裁剪/插值/均值替换等方式处理。缺失值处理方案包括线性插值、前向/后向填充、局部均值填充、语义零值填充。
+异常值检测支持三种方法：滚动 IQR（$x_t < Q_1 - \alpha \cdot \text{IQR}_t$或 $x_t > Q_3 + \alpha \cdot \text{IQR}_t$、滚动 Z-Score（$z_t = |x_t - \mu_t|/\sigma_t > \alpha$ ）、百分位规则。检测后根据 LLM 的建议选择裁剪/插值/均值替换等方式处理。缺失值处理方案包括线性插值、前向/后向填充、局部均值填充、语义零值填充。
 
 第二步是**多模态可视化生成**。利用 LLM 的多模态能力生成可视化套件 V，具体包括：时序总览图（原始数据 + 滚动均值 + 标准差）、STL 分解图（原始序列、趋势、季节性、残差）、ACF 和 PACF 自相关图。这些图不只是给人看的——它们会被传入 Planner 的 LLM 做视觉推理，成为模型选择的依据。
 
@@ -42,15 +42,15 @@ Curator 的职责是把原始脏数据变成干净且有结构性描述的数据
 
 Planner 接收 Curator 的输出 C，做两件事：选候选模型、优化超参数。
 
-**模型选择**：从预定义模型库 M 中筛选候选模型集 Mp（含统计类 ARIMA/Prophet/ETS/Theta、ML 回归类 XGBoost/Ridge、树模型、神经网络 LSTM、专用时序模型 PatchTST/N-BEATS 等），每个候选模型附有 LLM 生成的选择理由 r_i。
+**模型选择**：从预定义模型库 M 中筛选候选模型集 Mp（含统计类 ARIMA/Prophet/ETS/Theta、ML 回归类 XGBoost/Ridge、树模型、神经网络 LSTM、专用时序模型 PatchTST/N-BEATS 等），每个候选模型附有 LLM 生成的选择理由 $r_i$。
 
 核心是把 Curator 生成的可视化图（V）传入 LLM，让 LLM 看图说话："这条序列有明显季节性 + 趋势，建议优先考虑 Prophet 和 ETS；残差图显示非线性，可以加 XGBoost。"这是真正利用 LLM 多模态能力的地方。
 
 **超参数优化**：对每个候选模型 mim_i mi​，在其超参数空间 Θi\Theta_i Θi​ 中最多采样 N 个配置，通过在验证集上最小化 MAPE 来找最优配置：
 
-θi∗=arg⁡min⁡θi∈CiMAPEval(mi(θi))\theta_i^* = \arg\min_{\theta_i \in C_i} \text{MAPE}_{\text{val}}(m_i(\theta_i))θi∗​=argθi​∈Ci​min​MAPEval​(mi​(θi​))
+$$\theta_i^* = \arg\min_{\theta_i \in C_i} \text{MAPE}_{\text{val}}(m_i(\theta_i))$$
 
-最终把 top-k 个调好参的模型 MselectedM_{\text{selected}} Mselected​ 传给 Forecaster。
+最终把 top-k 个调好参的模型 $M_{\text{selected}}$ 传给 Forecaster。
 
 **这一步的关键局限**：模型库是预先手工定义的，策略空间固定。当遇到模型库中没有覆盖的时序模式（如间歇性需求序列、双重季节性 + 非平稳趋势的叠加）时，系统没有扩展或重组策略的能力。
 
@@ -62,17 +62,17 @@ Forecaster 接收 top-k 候选模型及其验证分数，由 LLM 决定集成策
 
 提供三种集成策略，由 LLM 基于验证结果推理选择：
 
-**单最优模型**（Single-Best）：当某个模型明显优于其他时，直接用它，令 wi∗=1w_{i^*} = 1 wi∗​=1。
+**单最优模型**（Single-Best）：当某个模型明显优于其他时，直接用它，令 $w_{i^*} = 1$ 。
 
 **性能加权平均**（Performance-Aware Averaging）：根据验证损失的倒数分配权重，加入温度参数 τ 和收缩系数 λ 防止权重过度集中：
 
-w~i=(si+ϵ)−β,wi=(1−λ)⋅clip(wperf,i,wmin⁡,wmax⁡)+λ⋅1k\tilde{w}_i = (s_i + \epsilon)^{-\beta}, \quad w_i = (1-\lambda)\cdot\text{clip}(w_{\text{perf},i}, w_{\min}, w_{\max}) + \lambda \cdot \frac{1}{k}w~i​=(si​+ϵ)−β,wi​=(1−λ)⋅clip(wperf,i​,wmin​,wmax​)+λ⋅k1​
+$$\tilde{w}_i = (s_i + \epsilon)^{-\beta}, \quad w_i = (1-\lambda)\cdot\text{clip}(w_{\text{perf},i}, w_{\min}, w_{\max}) + \lambda \cdot \frac{1}{k}$$
 
-其中 λ=0.1\lambda = 0.1 λ=0.1 的收缩项确保每个模型都保留一定权重，防止极端情况。
+其中 $\lambda = 0.1$  的收缩项确保每个模型都保留一定权重，防止极端情况。
 
 **鲁棒聚合**（Robust Aggregation）：当各模型预测差异较大时，用中位数或截尾均值（Trimmed Mean）代替加权平均，排除极端预测的干扰：
 
-x^trim,h=1k−2⌊ρk⌋∑i=⌊ρk⌋+1k−⌊ρk⌋x^h:↑(i)\hat{x}_{\text{trim},h} = \frac{1}{k-2\lfloor\rho k\rfloor}\sum_{i=\lfloor\rho k\rfloor+1}^{k-\lfloor\rho k\rfloor}\hat{x}_{h:\uparrow}^{(i)}x^trim,h​=k−2⌊ρk⌋1​i=⌊ρk⌋+1∑k−⌊ρk⌋​x^h:↑(i)​
+$$\hat{x}_{\text{trim},h} = \frac{1}{k-2\lfloor\rho k\rfloor}\sum_{i=\lfloor\rho k\rfloor+1}^{k-\lfloor\rho k\rfloor}\hat{x}_{h:\uparrow}^{(i)}$$
 
 **这一步的关键局限**：集成权重在测试集预测前就固定了（避免数据泄露），但这意味着如果序列在测试阶段发生分布偏移，Forecaster 无法动态调整集成策略。没有任何反思机制在预测失败后修正权重。
 
