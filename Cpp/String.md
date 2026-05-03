@@ -70,3 +70,13 @@ str.erase(str.find_last_not_of(" \t\n\r") + 1);
 // 移除所有空格
 str.erase(remove(str.begin(), str.end(), ' '), str.end());
 ```
+
+### 2. int2string
+```cpp
+std::string s = "id=";
+int x = 10;
+
+s = s + std::to_string(x);
+// 或
+s += std::to_string(x);
+```
