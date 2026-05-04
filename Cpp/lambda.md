@@ -233,8 +233,6 @@ auto factorial = [](auto self, int n) -> int {
     return n <= 1 ? 1 : n * self(self, n - 1);
 };
 factorial(factorial, 5);  // 120
-
-
 ```
 
 - C++23 起更优雅[[lambda#cpp23]]：使用 `deducing this`
