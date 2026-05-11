@@ -80,3 +80,36 @@ s = s + std::to_string(x);
 // 或
 s += std::to_string(x);
 ```
+## 3. `std::stoi`（C++11 起，推荐）
+
+头文件 `<string>`，可处理异常和进制。
+
+```cpp
+#include <string>
+#include <iostream>
+int main() {
+    std::string s = "123";
+    int num = std::stoi(s);          // num = 123
+    std::cout << num << std::endl;
+}
+```
+**支持进制**：可传入第二个参数（size_t 指针，存储第一个未转换字符的位置）和第三个参数（进制，默认 10）。
+
+```cpp
+std::string hexStr = "FF";
+int hexNum = std::stoi(hexStr, nullptr, 16);  // 255
+```
+**错误处理**：
+- 无法转换时抛出 `std::invalid_argument`
+- 数值超出 `int` 范围时抛出 `std::out_of_range`
+
+
+```cpp
+try {
+    int n = std::stoi("abc");
+} catch (const std::invalid_argument& e) {
+    std::cerr << "Invalid argument\n";
+} catch (const std::out_of_range& e) {
+    std::cerr << "Out of range\n";
+}
+```
