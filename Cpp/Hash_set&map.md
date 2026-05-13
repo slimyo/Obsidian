@@ -116,3 +116,10 @@
 
 > 注：`unordered_map` 的迭代器解引用得到 `std::pair<const Key, Value>&`；桶操作中的局部迭代器同样指向 `value_type`。  
 > 以上接口基于 C++17/C++20 标准，早期版本可能缺少 `contains`、`try_emplace`、`insert_or_assign`、`merge`、`extract` 等。
+
+在 C++ 标准库中：
+- **`std::unordered_set` / `std::unordered_map`**（哈希表实现）  
+    查找操作的平均时间复杂度是 **O(1)**，但最坏情况（大量哈希冲突）可能退化为 **O(n)**。  
+    实际性能依赖于哈希函数的质量和负载因子。
+- **`std::map` / `std::set`**（红黑树实现）  
+    查找操作的时间复杂度是 **O(log n)**，并非 O(1)。
