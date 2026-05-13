@@ -1,5 +1,23 @@
 # C++ string 核心API速查表
 
+## 构造函数
+
+以下是 `std::string` 的常用构造函数列表，按照你提供的格式整理：
+
+| 操作                  | 语法                                                               | 示例                                  | 说明                               |
+| ------------------- | ---------------------------------------------------------------- | ----------------------------------- | -------------------------------- |
+| **默认构造**            | `string()`                                                       | `string s;`                         | 构造空字符串                           |
+| **拷贝构造**            | `string(const string& s)`                                        | `string s2(s1);`                    | 以另一个 `string` 对象为副本              |
+| **移动构造** (C++11)    | `string(string&& s)`                                             | `string s2(move(s1));`              | 转移资源，原对象变为未定义但可析构                |
+| **C字符串构造**          | `string(const char* s)`                                          | `string s("hello");`                | 以空字符结尾的C风格字符串初始化                 |
+| **C字符串前n个字符**       | `string(const char* s, size_type count)`                         | `string s("hello", 3);`             | 取C字符串前 `count` 个字符（可含`\0`）       |
+| **重复字符构造**          | `string(size_type count, char ch)`                               | `string s(5, '.');`                 | 构造由 `count` 个 `ch` 组成的字符串        |
+| **子串构造**            | `string(const string& s, size_type pos, size_type count = npos)` | `string s2(s1, 1, 3);`              | 以 `s` 中从 `pos` 开始的 `count` 个字符构造 |
+| **迭代器区间构造**         | `template <class InputIt> string(InputIt first, InputIt last)`   | `string s(vec.begin(), vec.end());` | 以 `[first, last)` 区间内的字符构造       |
+| **初始化列表构造** (C++11) | `string(initializer_list<char> ilist)`                           | `string s({'a','b','c'});`          | 以花括号内的字符列表构造                     |
+
+> 注：C++17 起还可从 `std::string_view` 隐式转换构造，但上述为最常用版本。
+
 ## 一、增（插入/追加）
 
 | 操作         | 语法                       | 示例                                    | 说明            |

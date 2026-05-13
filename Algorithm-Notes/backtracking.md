@@ -4,6 +4,8 @@
 int size = nums.size();
 vector<int> path;
 vector<vector<int>> ans;
+
+1.集合类型
 auto dfs = [&](this auto&&dfs,int i)->void{
 	//下面没有加入答案，就这里：ans.push_back(path);
 	if(i==size){
@@ -19,6 +21,29 @@ auto dfs = [&](this auto&&dfs,int i)->void{
 		ans.push_back(path);// 集合类型题目，每次选择都加入答案
 		dfs(start+1);//下一层，从[start+1,size-1]选择
 		path.pop_back();//回溯
+		}
+	}
+};
+
+2. 排列类型--显示使用i的方法更好，减少push、pop操作
+vector<bool> used(size);//是否选择了
+auto dfs = [&](this auto&&dfs,(可以加上int i))->void{
+	//if(i==size){//这里i表示层次，第几次选择了
+	//或者
+	if(path.size()==size){
+		ans.push_back(path);
+		return;
+	}
+	
+	//本层内选择
+	for(int start=0;start<size;start++){
+		int x = nums[start];
+		if(!used[start]){//没有选择过才进入
+		used[start] = true;
+		path.push_back(x);//选择了--path[i] = x;
+		dfs();//下一层dfs(i+1);
+		path.pop_back();//回溯
+		used[start] = false;
 		}
 	}
 };
