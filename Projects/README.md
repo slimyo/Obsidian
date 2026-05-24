@@ -1,3 +1,9 @@
+
+nanovllm
+mini-sglang
+deepspeed
+
+
 # 一、入门级（系统 + 性能意识）
 
 ## 项目1：实现一个 Mini Deep Learning Framework
