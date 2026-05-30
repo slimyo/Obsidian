@@ -22,6 +22,19 @@
         # source ~/.zshrc
         ```
 
+- **macOS / Linux 用户**：
+    1. 打开你的终端 (Terminal)。
+    2. 执行以下命令下载并运行安装脚本[](https://nodejs.org/en/download/)：
+        ```bash
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh 
+        ```
+    3. 安装完成后，执行以下命令使配置生效，或者关闭并重新打开终端：   
+```   bash
+        source ~/.bashrc
+        # 如果你使用的是 zsh，则执行：
+        # source ~/.zshrc
+```
+
 ---
 
 ### 💻 第二步：通过 nvm 安装 Node.js
@@ -97,11 +110,50 @@ npm -v
 
 ---
 
-
 ## 2.  **安装 Go (版本 1.25+)**：
 
-- 前往 [Go 官网](https://go.dev/dl/) 下载并安装。安装完成后，powersehll运行 `go version` 确认版本号。
+### windows:
 
+- 前往 [Go 官网](https://go.dev/dl/) 下载并安装。安装完成后，powersehll运行 `go version` 确认版本号。
+### linux
+
+- 从官网下载并安装 (推荐)
+1. **更新系统并安装工具包**
+```bash
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install wget build-essential
+```
+    
+- `build-essential` 包含了编译和构建 Go 项目时可能会用到的`gcc`、`make`等工具
+2. **下载并解压 Go**  
+    将以下命令中的 `VERSION_NUMBER` 替换为你想安装的具体版本号（如 1.26.3），你可以在 [Go 官网下载页](https://go.dev/dl/) 查看最新的稳定版版本号：
+```bash
+    wget https://golang.org/dl/goVERSION_NUMBER.linux-amd64.tar.gz
+    sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf goVERSION_NUMBER.linux-amd64.tar.gz
+    rm goVERSION_NUMBER.linux-amd64.tar.gz
+```
+- `wget`：下载 Go 的 Linux 二进制包
+- `sudo rm -rf /usr/local/go`：确保之前没有旧版本的 Go，以避免冲突[](https://datasea.cn/go0130445640.html)。
+- `sudo tar -C /usr/local -xzf`：将下载的压缩包解压到 `/usr/local` 目录[](https://datasea.cn/go1109264465.html#lwptoc12)。
+
+3. **配置环境变量**  
+    将 Go 的安装路径添加到系统的 PATH 中，使其在终端中能全局调用：
+
+```bash
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+    source ~/.bashrc
+```
+    
+- `echo ... >> ~/.bashrc`：将配置命令写入 `~/.bashrc` 文件，这样每次打开终端都会自动加载
+- `source ~/.bashrc`：立即生效配置，无需重启终端[](https://blog.csdn.net/b1ue_2/article/details/154843829)[](https://tripletech.hashnode.dev/how-to-install-go-on-wsl-ubuntu-a-step-by-step-guide?source=more_articles_bottom_blogs)。
+        
+4. **验证安装**
+```bash
+    go version
+```
+    如果一切顺利，你将看到类似 `go version go1.22.5 linux/amd64` 的输出，表明安装成功
+
+---
 ## 3.  **安装 Codex CLI**：
 
 - Command-line interface
@@ -110,14 +162,13 @@ npm -v
     ```bash
     npm install -g @openai/codex
     ```
-
+---
 ## 4.  **获取 DeepSeek API Key**：
 
 - 访问 [DeepSeek 开放平台](https://platform.deepseek.com/api_keys)，登录后创建并复制你的 API Key。请妥善保管，它只显示一次。
 
 ---
-
-##  核心操作：配置与启动
+##  5.核心操作：配置与启动
 
 本方案通过 **Moon Bridge** 作为桥梁，让 Codex 的请求能正确发送给 DeepSeek 模型。请按以下顺序，在**两个独立的终端**中分别操作。
 
@@ -182,7 +233,7 @@ npm -v
       model: moonbridge
       max_tokens: 65536
     ```
-
+sk-b6703334a3084b3e8ccc60a17e28b4f6
 - key在配置文件中
 
 3.  **启动 Moon Bridge 服务**：
@@ -210,6 +261,24 @@ npm -v
 2.  **生成 `config.toml`**：
     运行下方对应你操作系统的命令，它会自动为 Codex 生成连接 Moon Bridge 所需的配置文件。
 
+- **macOS / Linux**:
+    
+    ``` bash
+    # 回到 moon-bridge 目录生成配置
+    cd /path/to/moon-bridge
+    CODEX_HOME_DIR="${CODEX_HOME:-$HOME/.codex}"
+    mkdir -p "$CODEX_HOME_DIR"
+    cp "$CODEX_HOME_DIR/config.toml" "$CODEX_HOME_DIR/config.toml.bak" 2>/dev/null || true
+    MODEL="$(go run ./cmd/moonbridge --config config.yml --print-codex-model)"
+    go run ./cmd/moonbridge \
+      --config config.yml \
+      --print-codex-config "$MODEL" \
+      --codex-base-url "http://127.0.0.1:38440/v1" \
+      --codex-home "$CODEX_HOME_DIR" \
+      > "$CODEX_HOME_DIR/config.toml"
+    ```
+
+- **Windows (PowerShell)**:
     *   **Windows (PowerShell)**:
         ```powershell
         # 回到 moon-bridge 目录生成配置
