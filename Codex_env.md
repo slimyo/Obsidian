@@ -233,7 +233,7 @@ npm -v
       model: moonbridge
       max_tokens: 65536
     ```
-sk-b6703334a3084b3e8ccc60a17e28b4f6
+-1
 - key在配置文件中
 
 3.  **启动 Moon Bridge 服务**：
