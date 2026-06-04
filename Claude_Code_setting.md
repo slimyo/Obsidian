@@ -38,15 +38,14 @@ Claude Code 确实提供了多种方式来简化确认流程,让它只在遇到*
 *   **利用Hooks自动化**：Hooks是监听特定事件（如工具执行）并触发自定义脚本的系统。你可以设置一个 `PermissionRequest` Hook，在后台自动批准特定操作，实现更灵活的自动化。
 *   **命令速查表**：
 
-| 功能 | 命令 |
-| :--- | :--- |
-| 查看版本 | `claude --version` |
-| 启动会话 | `claude` |
-| 恢复上次会话 | `claude -c` |
-| 更新Claude Code | `claude update` |
-| 切换工作模式 | 会话中按 `Shift+Tab` |
-| 查看帮助 | `claude --help` |
-| 指定权限模式启动 | `claude --permission-mode <模式名>` |
-| 跳过所有权限检查（高危） | `claude --dangerously-skip-permissions` |
+| 功能            | 命令                                      |
+| :------------ | :-------------------------------------- |
+| 查看版本          | `claude --version`                      |
+| 启动会话          | `claude`                                |
+| 恢复上次会话        | `claude -c`                             |
+| 更新Claude Code | `claude update`                         |
+| 切换工作模式        | 会话中按 `Shift+Tab`                        |
+| 查看帮助          | `claude --help`                         |
+| 指定权限模式启动      | `claude --permission-mode <模式名>`        |
+| 跳过所有权限检查（高危）  | `claude --dangerously-skip-permissions` |
 
-希望这些方案能让你更流畅地使用Claude Code。根据自己的开发场景和风险承受能力，选一个最适合的吧。如果想深入探讨某个方案的细节，随时可以再问我。

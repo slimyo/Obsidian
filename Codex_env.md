@@ -232,10 +232,11 @@ npm -v
     defaults:
       model: moonbridge
       max_tokens: 65536
-    ```
--1
+    
 - key在配置文件中
-
+  
+	```
+	
 3.  **启动 Moon Bridge 服务**：
     在 `moon-bridge` 目录下，运行以下命令启动服务。保持这个终端窗口一直运行。
     ```bash
