@@ -49,3 +49,5 @@ Claude Code 确实提供了多种方式来简化确认流程,让它只在遇到*
 | 指定权限模式启动      | `claude --permission-mode <模式名>`        |
 | 跳过所有权限检查（高危）  | `claude --dangerously-skip-permissions` |
 
+
+
