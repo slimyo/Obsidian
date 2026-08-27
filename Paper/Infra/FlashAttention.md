@@ -29,7 +29,7 @@ $$\begin{align*}
 \displaystyle 
 dV&=P^TdO\in \mathbb R^{(N\times d)}\\
 dP&=dOV^T\in \mathbb R^{(N\times N)}\\
-dS&=dsoftmax(dP)\in \mathbb R^{(N\times N)}\\
+dS&=softmax_{backward}(dP,S)\in \mathbb R^{(N\times N)}\\
 dQ&=dSK\in \mathbb R^{(N\times d)}\\
 dK&=QdS^T\in \mathbb R^{(N\times d)}\\
 \end{align*}$$进一步推导，行向量p,s有：$$\begin{align*}
