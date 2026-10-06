@@ -153,15 +153,15 @@ def f(): ...
 
 ### 4. 源码里出现的装饰器
 
-|装饰器|出现位置|作用|
-|---|---|---|
-|`@property`|`Sequence`|方法变属性|
-|`@classmethod`|`BlockManager.compute_hash`|方法绑定到类|
-|`@lru_cache(1)`|`get_rope`|缓存函数结果：同样参数再调用直接返回上次的对象。要求参数可哈希（int/float/str/tuple 可以，list/dict 不行）|
-|`@torch.inference_mode()`|`run_model`、`capture_cudagraph`|关闭梯度和 autograd 记录，省显存提速|
-|`@torch.compile`|`RotaryEmbedding.forward`|把函数编译成融合后的 GPU kernel|
-|`@triton.jit`|`store_kvcache_kernel`|这个函数**不再按普通 Python 执行**，而是被编译成 GPU kernel|
-|`@dataclass`|`Config`（推断）|自动生成 `__init__`、`__repr__` 等|
+| 装饰器                       | 出现位置                            | 作用                                                                   |
+| ------------------------- | ------------------------------- | -------------------------------------------------------------------- |
+| `@property`               | `Sequence`                      | 方法变属性                                                                |
+| `@classmethod`            | `BlockManager.compute_hash`     | 方法绑定到类                                                               |
+| `@lru_cache(1)`           | `get_rope`                      | 缓存函数结果：同样参数再调用直接返回上次的对象。要求参数可哈希（int/float/str/tuple 可以，list/dict 不行） |
+| `@torch.inference_mode()` | `run_model`、`capture_cudagraph` | 关闭梯度和 autograd 记录，省显存提速                                              |
+| `@torch.compile`          | `RotaryEmbedding.forward`       | 把函数编译成融合后的 GPU kernel                                                |
+| `@triton.jit`             | `store_kvcache_kernel`          | 这个函数**不再按普通 Python 执行**，而是被编译成 GPU kernel                            |
+| `@dataclass`              | `Config`（推断）                    | 自动生成 `__init__`、`__repr__` 等                                         |
 
 ## 五、魔法方法（dunder）
 
